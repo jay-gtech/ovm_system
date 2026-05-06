@@ -41,10 +41,9 @@ class TenantMixin:
     Mixin for multi-tenant isolation.
     Every tenant-owned entity must have an organization_id.
     """
-    # Note: Foreign key is commented out until Organization model exists
     organization_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        # ForeignKey("organization.id", ondelete="CASCADE"),
+        ForeignKey("organization.id", ondelete="RESTRICT"),
         index=True,
         nullable=False,
     )

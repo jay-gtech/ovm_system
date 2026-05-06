@@ -24,3 +24,31 @@ class Base(DeclarativeBase):
         """
         name = cls.__name__
         return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+
+
+# Imported after Base so the dependency direction is unambiguous:
+# Base defines the metadata; mixins attach columns to it via mapped_column.
+from app.db.mixins import UUIDMixin, TimestampMixin, TenantMixin, SoftDeleteMixin, AuditMixin  # noqa: E402
+
+
+class BaseModel(Base, UUIDMixin, TimestampMixin):
+    """
+    Base for all non-tenant specific models.
+    Includes UUID PK and Timestamps.
+    """
+    __abstract__ = True
+
+
+class TenantBaseModel(Base, UUIDMixin, TimestampMixin, TenantMixin):
+    """
+    Base for all tenant-specific models.
+    Includes UUID PK, Timestamps, and Organization ID.
+    """
+    __abstract__ = True
+
+
+class FullBaseModel(Base, UUIDMixin, TimestampMixin, TenantMixin, SoftDeleteMixin, AuditMixin):
+    """
+    Complete base model with Soft Delete, Tenant isolation, and Audit support.
+    """
+    __abstract__ = True
