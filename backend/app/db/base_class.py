@@ -1,3 +1,4 @@
+import re
 from typing import Any
 from sqlalchemy import MetaData
 from sqlalchemy.orm import DeclarativeBase, declared_attr
@@ -21,6 +22,5 @@ class Base(DeclarativeBase):
         Generate __tablename__ automatically from class name.
         Example: UserAccount -> user_account
         """
-        import re
         name = cls.__name__
         return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()

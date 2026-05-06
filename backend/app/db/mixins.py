@@ -9,18 +9,20 @@ from sqlalchemy.sql import func
 class UUIDMixin:
     """
     Mixin to add a UUID primary key to a model.
+    Note: index=True is redundant on Primary Key and removed for optimization.
     """
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
-        index=True,
     )
 
 class TimestampMixin:
     """
     Mixin to add created_at and updated_at timestamps.
     Using timezone-aware datetimes.
+    
+    updated_at: Managed by SQLAlchemy 'onupdate' at the ORM level.
     """
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -1,5 +1,5 @@
 from app.db.base_class import Base
-from app.db.mixins import UUIDMixin, TimestampMixin, TenantMixin, SoftDeleteMixin
+from app.db.mixins import UUIDMixin, TimestampMixin, TenantMixin, SoftDeleteMixin, AuditMixin
 
 class BaseModel(Base, UUIDMixin, TimestampMixin):
     """
@@ -15,8 +15,8 @@ class TenantBaseModel(Base, UUIDMixin, TimestampMixin, TenantMixin):
     """
     __abstract__ = True
 
-class FullBaseModel(Base, UUIDMixin, TimestampMixin, TenantMixin, SoftDeleteMixin):
+class FullBaseModel(Base, UUIDMixin, TimestampMixin, TenantMixin, SoftDeleteMixin, AuditMixin):
     """
-    Complete base model with Soft Delete and Tenant isolation.
+    Complete base model with Soft Delete, Tenant isolation, and Audit support.
     """
     __abstract__ = True

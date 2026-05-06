@@ -3,7 +3,7 @@ from app.core.config import settings
 
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=True,
+    echo=settings.SQLALCHEMY_ECHO,
     future=True,
     pool_pre_ping=True,
 )
@@ -18,7 +18,4 @@ SessionLocal = async_sessionmaker(
 
 async def get_db():
     async with SessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+        yield session
