@@ -13,10 +13,28 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.token import TokenPayload
 from app.core.redis_client import is_token_blacklisted
+from app.services.uow import SQLAlchemyUnitOfWork
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
 )
+
+async def get_uow(
+    db: AsyncSession = Depends(get_db),
+) -> AsyncGenerator[SQLAlchemyUnitOfWork, None]:
+    """
+    Provides a Unit of Work backed by the request-scoped DB session.
+
+    Transaction contract:
+      - The UoW context is entered here so __aexit__ is always guaranteed to run.
+      - On success:   the service layer MUST call await uow.commit() explicitly.
+      - On exception: __aexit__ rolls back automatically (safety-net).
+
+    Session lifecycle is owned by get_db(), not this dependency.
+    """
+    uow = SQLAlchemyUnitOfWork(session=db)
+    async with uow:
+        yield uow
 
 async def get_current_user(
     db: AsyncSession = Depends(get_db),

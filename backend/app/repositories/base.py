@@ -82,7 +82,7 @@ class BaseRepository(Generic[ModelType]):
                 )
         db_obj = self.model(**obj_in)
         db.add(db_obj)
-        await db.commit()
+        await db.flush()
         await db.refresh(db_obj)
         return db_obj
 
@@ -109,7 +109,7 @@ class BaseRepository(Generic[ModelType]):
             if hasattr(db_obj, field):
                 setattr(db_obj, field, obj_in[field])
         db.add(db_obj)
-        await db.commit()
+        await db.flush()
         await db.refresh(db_obj)
         return db_obj
 
@@ -128,11 +128,13 @@ class BaseRepository(Generic[ModelType]):
                 if hasattr(obj, "deleted_at"):
                     obj.deleted_at = datetime.now(timezone.utc)
                 db.add(obj)
-                await db.commit()
-                # Refresh to ensure ORM state reflects the committed soft-delete
+                await db.flush()
+                # Soft-delete flushed into the active transaction. Refresh to
+                # capture server-side defaults (deleted_at, updated_at).
+                # Commit is deferred to the service layer via UoW.
                 await db.refresh(obj)
             else:
                 # Fallback to hard-delete for non-financial/non-soft-delete models
                 await db.delete(obj)
-                await db.commit()
+                await db.flush()
         return obj
