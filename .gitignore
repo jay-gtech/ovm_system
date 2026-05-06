@@ -1,0 +1,20 @@
+# Graphify
+graphify-out/
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Node
+node_modules/
+dist/
+
+# System
+.DS_Store
+Thumbs.db
