@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.middleware.correlation import CorrelationIdMiddleware
+from app.middleware.tenant import TenantContextMiddleware
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,9 +21,12 @@ app = FastAPI(
 # Middleware stack — Starlette executes middleware in LIFO (reverse-add) order.
 # Add outermost layers last so they wrap all inner layers.
 #
-# Execution order (request in → response out):
-#   1. CORSMiddleware       — handles OPTIONS pre-flight first
-#   2. CorrelationIdMiddleware — assigns X-Request-ID before any handler runs
+# Execution order (request → route handler):
+#   1. CORSMiddleware            — handles OPTIONS pre-flight first
+#   2. CorrelationIdMiddleware   — assigns X-Request-ID to ContextVar
+#   3. TenantContextMiddleware   — extracts tenant/user from JWT (request_id already set)
+#
+# Cleanup order (response ← route handler) is the reverse of the above.
 # ---------------------------------------------------------------------------
 
 # CORS must be outermost so pre-flight OPTIONS responses are returned
@@ -39,6 +43,10 @@ if settings.ALLOWED_ORIGINS:
 # CorrelationIdMiddleware runs inside CORS so every non-OPTIONS request
 # gets a traceable request_id bound to its ContextVar before hitting routes.
 app.add_middleware(CorrelationIdMiddleware)
+
+# TenantContextMiddleware runs inside CorrelationIdMiddleware to extract
+# tenant/user context from the token after the request is traceable.
+app.add_middleware(TenantContextMiddleware)
 
 
 # ---------------------------------------------------------------------------

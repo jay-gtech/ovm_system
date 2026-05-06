@@ -12,7 +12,13 @@ from uuid import UUID
 # ---------------------------------------------------------------------------
 
 _tenant_id_ctx: ContextVar[Optional[UUID]] = ContextVar("tenant_id", default=None)
+_user_id_ctx: ContextVar[Optional[UUID]] = ContextVar("user_id", default=None)
 _request_id_ctx: ContextVar[Optional[UUID]] = ContextVar("request_id", default=None)
+
+
+class TenantContextMissingError(RuntimeError):
+    """Raised when a tenant-scoped operation is attempted without an active tenant ID."""
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -41,6 +47,32 @@ def reset_tenant_id(token: Token) -> None:
     Always call this in a finally block after set_tenant_id().
     """
     _tenant_id_ctx.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# User ID helpers
+# ---------------------------------------------------------------------------
+
+def get_user_id() -> Optional[UUID]:
+    """Return the current user_id from the context, or None if not set."""
+    return _user_id_ctx.get()
+
+
+def set_user_id(user_id: Optional[UUID]) -> Token:
+    """
+    Set the current user_id in the context.
+
+    Returns a Token that MUST be passed to reset_user_id() inside a
+    finally block.
+    """
+    return _user_id_ctx.set(user_id)
+
+
+def reset_user_id(token: Token) -> None:
+    """
+    Reset the user_id context variable to the state captured by *token*.
+    """
+    _user_id_ctx.reset(token)
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +109,7 @@ def reset_request_id(token: Token) -> None:
 
 def require_tenant_id() -> UUID:
     """
-    Return the current tenant_id or raise RuntimeError if not set.
+    Return the current tenant_id or raise TenantContextMissingError if not set.
 
     Use this inside repository methods to enforce that every database
     operation is tenant-scoped.  Raising is intentional (fail-closed):
@@ -88,7 +120,7 @@ def require_tenant_id() -> UUID:
     """
     tenant_id = _tenant_id_ctx.get()
     if tenant_id is None:
-        raise RuntimeError(
+        raise TenantContextMissingError(
             "Tenant context is missing. All repository operations require "
             "an active tenant_id. Ensure TenantContextMiddleware has run "
             "before any DB access."
@@ -114,4 +146,5 @@ def clear_context() -> None:
     reset_tenant_id / reset_request_id pattern instead.
     """
     _tenant_id_ctx.set(None)
+    _user_id_ctx.set(None)
     _request_id_ctx.set(None)
