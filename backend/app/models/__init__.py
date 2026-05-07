@@ -3,6 +3,7 @@ from .user import User
 from .role import Role
 from .user_role import UserRole
 from .audit_log import AuditLog
+from .vendor import Vendor, VendorStatus
 
 __all__ = [
     "Organization",
@@ -10,4 +11,6 @@ __all__ = [
     "Role",
     "UserRole",
     "AuditLog",
+    "Vendor",
+    "VendorStatus",
 ]
