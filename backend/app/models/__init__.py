@@ -7,6 +7,8 @@ from .vendor import Vendor, VendorStatus
 from .product import Product, ProductStatus
 from .purchase_order import PurchaseOrder, POLineItem, PurchaseOrderStatus
 from .invoice import Invoice, InvoiceLineItem, InvoiceStatus
+from .payment import Payment, PaymentStatus
+from .vendor_settlement import VendorSettlement, SettlementStatus
 
 __all__ = [
     "Organization",
@@ -24,4 +26,8 @@ __all__ = [
     "Invoice",
     "InvoiceLineItem",
     "InvoiceStatus",
+    "Payment",
+    "PaymentStatus",
+    "VendorSettlement",
+    "SettlementStatus",
 ]
