@@ -4,6 +4,7 @@ from app.db.session import SessionLocal
 from app.repositories.organization import OrganizationRepository
 from app.repositories.user import UserRepository
 from app.repositories.vendor import VendorRepository
+from app.repositories.product import ProductRepository
 
 
 class BaseUnitOfWork(ABC):
@@ -21,6 +22,7 @@ class BaseUnitOfWork(ABC):
     organizations: OrganizationRepository
     users: UserRepository
     vendors: VendorRepository
+    products: ProductRepository
 
     async def __aenter__(self):
         return self
@@ -68,6 +70,7 @@ class SQLAlchemyUnitOfWork(BaseUnitOfWork):
         self.organizations = OrganizationRepository()
         self.users = UserRepository()
         self.vendors = VendorRepository()
+        self.products = ProductRepository()
 
     async def __aenter__(self):
         if self.session is None:
