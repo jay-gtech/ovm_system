@@ -5,6 +5,7 @@ from app.repositories.organization import OrganizationRepository
 from app.repositories.user import UserRepository
 from app.repositories.vendor import VendorRepository
 from app.repositories.product import ProductRepository
+from app.repositories.purchase_order import PurchaseOrderRepository, POLineItemRepository
 
 
 class BaseUnitOfWork(ABC):
@@ -23,6 +24,8 @@ class BaseUnitOfWork(ABC):
     users: UserRepository
     vendors: VendorRepository
     products: ProductRepository
+    purchase_orders: PurchaseOrderRepository
+    po_line_items: POLineItemRepository
 
     async def __aenter__(self):
         return self
@@ -71,6 +74,8 @@ class SQLAlchemyUnitOfWork(BaseUnitOfWork):
         self.users = UserRepository()
         self.vendors = VendorRepository()
         self.products = ProductRepository()
+        self.purchase_orders = PurchaseOrderRepository()
+        self.po_line_items = POLineItemRepository()
 
     async def __aenter__(self):
         if self.session is None:

@@ -6,6 +6,8 @@ from app.models.role import Role
 from app.models.user_role import UserRole
 from app.models.audit_log import AuditLog
 from app.models.vendor import Vendor
+from app.models.product import Product
+from app.models.purchase_order import PurchaseOrder, POLineItem
 
 __all__ = [
     "Base",
@@ -23,4 +25,7 @@ __all__ = [
     "UserRole",
     "AuditLog",
     "Vendor",
+    "Product",
+    "PurchaseOrder",
+    "POLineItem",
 ]
