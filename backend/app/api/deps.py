@@ -77,24 +77,45 @@ async def get_current_user(
             detail="Could not validate credentials",
         )
     
-    # TODO(auth): Replace this placeholder before ANY production deployment.
-    # WARNING: This stub bypasses real identity resolution. Every route protected
-    # by this dependency currently accepts any valid, non-revoked JWT and returns
-    # a fake user object. Real user lookup must be wired here (see commented block
-    # below) once the user CRUD layer is complete.
-    #
-    # Real implementation:
-    #   user = await crud.user.get(db, id=token_data.sub)
-    #   if not user:
-    #       raise HTTPException(status_code=404, detail="User not found")
-    #   return user
-    user_id = uuid.UUID(token_data.sub)
-    return User(
-        id=user_id,
-        email="placeholder@example.com",
-        is_active=True,
-        is_superuser=False
-    )
+    # Tenant ID is mandatory on every access token in this multi-tenant system.
+    # Absence means a misconfigured auth flow; fail closed rather than letting
+    # require_tenant_id() raise TenantContextMissingError (RuntimeError → 500).
+    if token_data.tenant_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials",
+        )
+
+    try:
+        user_id = uuid.UUID(token_data.sub)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials",
+        )
+
+    from app.repositories.user import UserRepository
+    user_repo = UserRepository()
+    user = await user_repo.get(db, id=user_id)
+
+    if not user:
+        # Return 403 not 404: 404 lets a caller with a valid JWT enumerate
+        # which user IDs exist inside the tenant.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials",
+        )
+
+    # Defense-in-depth: the middleware already scopes the DB query to the JWT
+    # tenant via the ContextVar, but we assert it explicitly so future refactors
+    # cannot accidentally widen the lookup without breaking this invariant.
+    if str(user.organization_id) != token_data.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials",
+        )
+
+    return user
 
 
 async def get_current_active_user(
@@ -105,19 +126,22 @@ async def get_current_active_user(
     return current_user
 
 
-def check_role(roles: list[str]):
+def check_role(required_roles: list[str]):
     """
-    Placeholder for role dependency.
+    Dependency to check if the current user has at least one of the required roles.
+
+    RBAC is not yet wired. Until role-loading is implemented this raises 403 for
+    every non-superuser, keeping every guarded route fail-closed.  When RBAC ships,
+    replace the body with a real role-intersection check.
     """
     async def role_checker(
         current_user: User = Depends(get_current_active_user),
     ) -> User:
-        # Placeholder logic
-        # user_roles = [r.name for r in current_user.roles]
-        # if not any(role in user_roles for role in roles):
-        #     raise HTTPException(
-        #         status_code=status.HTTP_403_FORBIDDEN,
-        #         detail="The user doesn't have enough privileges",
-        #     )
-        return current_user
+        if current_user.is_superuser:
+            return current_user
+        # Fail closed: RBAC not yet implemented.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
     return role_checker

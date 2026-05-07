@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import SessionLocal
 from app.repositories.organization import OrganizationRepository
+from app.repositories.user import UserRepository
 
 
 class BaseUnitOfWork(ABC):
@@ -17,6 +18,7 @@ class BaseUnitOfWork(ABC):
 
     session: AsyncSession
     organizations: OrganizationRepository
+    users: UserRepository
 
     async def __aenter__(self):
         return self
@@ -62,6 +64,7 @@ class SQLAlchemyUnitOfWork(BaseUnitOfWork):
         self._provided_session = session
         self.session = session
         self.organizations = OrganizationRepository()
+        self.users = UserRepository()
 
     async def __aenter__(self):
         if self.session is None:
