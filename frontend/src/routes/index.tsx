@@ -9,6 +9,7 @@ const Orders     = lazy(() => import('../modules/orders/OrdersPage'))
 const Vendors    = lazy(() => import('../modules/vendors/VendorsPage'))
 const Products   = lazy(() => import('../modules/products/ProductsPage'))
 const Invoices   = lazy(() => import('../modules/invoices/InvoicesPage'))
+const InvoiceDetail = lazy(() => import('../modules/invoices/InvoiceDetailPage'))
 const Payments   = lazy(() => import('../modules/payments/PaymentsPage'))
 const GRN        = lazy(() => import('../modules/grn/GRNPage'))
 const Reconcile  = lazy(() => import('../modules/reconcile/ReconcilePage'))
@@ -43,6 +44,7 @@ export function AppRoutes() {
         <Route path="/vendors"   element={<Suspense fallback={<PageLoader/>}><Vendors/></Suspense>} />
         <Route path="/products"  element={<Suspense fallback={<PageLoader/>}><Products/></Suspense>} />
         <Route path="/invoices"  element={<Suspense fallback={<PageLoader/>}><Invoices/></Suspense>} />
+        <Route path="/invoices/:id" element={<Suspense fallback={<PageLoader/>}><InvoiceDetail/></Suspense>} />
         <Route path="/payments"  element={<Suspense fallback={<PageLoader/>}><Payments/></Suspense>} />
         <Route path="/grn"       element={<Suspense fallback={<PageLoader/>}><GRN/></Suspense>} />
         <Route path="/reconcile" element={<Suspense fallback={<PageLoader/>}><Reconcile/></Suspense>} />

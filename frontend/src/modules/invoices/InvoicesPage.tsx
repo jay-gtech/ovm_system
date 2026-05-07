@@ -1,35 +1,46 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Download, Eye, AlertCircle } from 'lucide-react'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Card, CardContent } from '../../components/ui/Card'
-import { mockInvoices, mockAgingData } from '../../utils/mockData'
+import { useInvoices } from '../../hooks/useInvoices'
+import { mockAgingData } from '../../utils/mockData'
 import { formatINR, formatDate } from '../../utils/format'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { Loader } from '../../components/feedback/Loader'
 
 export default function InvoicesPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
-  const filtered = mockInvoices.filter(inv => {
+  
+  const { data: invoicesData, isLoading } = useInvoices()
+  const invoices = invoicesData?.items || []
+
+  const filtered = invoices.filter(inv => {
     const ms = inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
       inv.vendorName.toLowerCase().includes(search.toLowerCase()) ||
       inv.orderNumber.toLowerCase().includes(search.toLowerCase())
     return ms && (filterStatus === 'ALL' || inv.status === filterStatus)
   })
-  const overdueTotal = mockInvoices.filter(i => i.isOverdue).reduce((a, i) => a + i.totalAmount, 0)
-  const pendingTotal = mockInvoices.filter(i => i.status !== 'PAID').reduce((a, i) => a + i.totalAmount, 0)
+  
+  const overdueTotal = invoices.filter(i => i.isOverdue).reduce((a, i) => a + i.totalAmount, 0)
+  const pendingTotal = invoices.filter(i => i.status !== 'PAID').reduce((a, i) => a + i.totalAmount, 0)
+
+  if (isLoading) return <Loader />
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Invoices" subtitle={`${mockInvoices.length} invoices · ${mockInvoices.filter(i=>i.isOverdue).length} overdue`}
+      <PageHeader title="Invoices" subtitle={`${invoices.length} invoices · ${invoices.filter(i=>i.isOverdue).length} overdue`}
         actions={<Button variant="outline" className="gap-2"><Download size={15}/> Export</Button>} />
 
-      {mockInvoices.some(i => i.isOverdue) && (
+      {invoices.some(i => i.isOverdue) && (
         <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
           <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-red-700">{mockInvoices.filter(i=>i.isOverdue).length} overdue invoices totalling {formatINR(overdueTotal)}</p>
+            <p className="text-sm font-semibold text-red-700">{invoices.filter(i=>i.isOverdue).length} overdue invoices totalling {formatINR(overdueTotal)}</p>
             <p className="text-xs text-red-500 mt-0.5">Immediate follow-up required.</p>
           </div>
         </div>
@@ -38,10 +49,10 @@ export default function InvoicesPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2 grid gap-3 grid-cols-2 sm:grid-cols-4">
           {[
-            { label: 'Outstanding', value: formatINR(pendingTotal), sub: `${mockInvoices.filter(i=>i.status!=='PAID').length} invoices`, c: 'border-brand-100 bg-brand-50 text-brand-700' },
-            { label: 'Overdue', value: formatINR(overdueTotal), sub: `${mockInvoices.filter(i=>i.isOverdue).length} invoices`, c: 'border-red-100 bg-red-50 text-red-700' },
-            { label: 'Matched', value: `${mockInvoices.filter(i=>i.matchStatus==='MATCHED').length}`, sub: '3-way match OK', c: 'border-green-100 bg-green-50 text-green-700' },
-            { label: 'Mismatch', value: `${mockInvoices.filter(i=>i.matchStatus==='MISMATCH').length}`, sub: 'Needs review', c: 'border-orange-100 bg-orange-50 text-orange-700' },
+            { label: 'Outstanding', value: formatINR(pendingTotal), sub: `${invoices.filter(i=>i.status!=='PAID').length} invoices`, c: 'border-brand-100 bg-brand-50 text-brand-700' },
+            { label: 'Overdue', value: formatINR(overdueTotal), sub: `${invoices.filter(i=>i.isOverdue).length} invoices`, c: 'border-red-100 bg-red-50 text-red-700' },
+            { label: 'Matched', value: `${invoices.filter(i=>i.matchStatus==='MATCHED').length}`, sub: '3-way match OK', c: 'border-green-100 bg-green-50 text-green-700' },
+            { label: 'Mismatch', value: `${invoices.filter(i=>i.matchStatus==='MISMATCH').length}`, sub: 'Needs review', c: 'border-orange-100 bg-orange-50 text-orange-700' },
           ].map(s => (
             <div key={s.label} className={`rounded-xl border px-4 py-3 ${s.c}`}>
               <p className="text-xs font-medium opacity-70">{s.label}</p>
@@ -72,7 +83,7 @@ export default function InvoicesPage() {
           </div>
           <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}
             className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-brand-400">
-            {['ALL','DRAFT','SENT','PARTIALLY_PAID','PAID','OVERDUE','DISPUTED'].map(s =>
+            {['ALL','DRAFT','ISSUED','PAID','OVERDUE','DISPUTED'].map(s =>
               <option key={s} value={s}>{s==='ALL'?'All Statuses':s.replace(/_/g,' ')}</option>)}
           </select>
         </div>
@@ -104,7 +115,10 @@ export default function InvoicesPage() {
                     <td className="px-4 py-3"><StatusBadge status={inv.matchStatus}/></td>
                     <td className="px-4 py-3"><StatusBadge status={inv.status}/></td>
                     <td className="px-4 py-3">
-                      <button className="flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:border-brand-300 hover:text-brand-600 transition-colors">
+                      <button 
+                        onClick={() => navigate(`/invoices/${inv.id}`)}
+                        className="flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:border-brand-300 hover:text-brand-600 transition-colors"
+                      >
                         <Eye size={11}/> View
                       </button>
                     </td>
@@ -113,7 +127,7 @@ export default function InvoicesPage() {
               </tbody>
             </table>
           </div>
-          <div className="border-t border-slate-100 px-4 py-3"><p className="text-xs text-slate-400">Showing {filtered.length} of {mockInvoices.length}</p></div>
+          <div className="border-t border-slate-100 px-4 py-3"><p className="text-xs text-slate-400">Showing {filtered.length} of {invoices.length}</p></div>
         </CardContent>
       </Card>
     </div>

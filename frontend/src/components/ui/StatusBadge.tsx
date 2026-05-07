@@ -18,9 +18,11 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   CLOSED:             { label: 'Closed',             className: 'bg-slate-200 text-slate-600 border-slate-300' },
   DISPUTED:           { label: 'Disputed',           className: 'bg-red-50 text-red-700 border-red-200' },
   // Invoice statuses
+  ISSUED:             { label: 'Issued',             className: 'bg-blue-50 text-blue-700 border-blue-200' },
   SENT:               { label: 'Sent',               className: 'bg-blue-50 text-blue-700 border-blue-200' },
   OVERDUE:            { label: 'Overdue',            className: 'bg-red-50 text-red-700 border-red-200' },
   PARTIALLY_PAID:     { label: 'Partially Paid',     className: 'bg-orange-50 text-orange-700 border-orange-200' },
+  CANCELLED:          { label: 'Cancelled',          className: 'bg-slate-200 text-slate-600 border-slate-300' },
   // Match statuses
   MATCHED:            { label: 'Matched',            className: 'bg-green-50 text-green-700 border-green-200' },
   PARTIAL_MATCH:      { label: 'Partial Match',      className: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -37,6 +39,8 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   MEDIUM:             { label: 'Medium',             className: 'bg-amber-50 text-amber-700 border-amber-200' },
   LOW:                { label: 'Low',                className: 'bg-blue-50 text-blue-700 border-blue-200' },
   // Payment
+  RECEIVED:           { label: 'Received',           className: 'bg-green-100 text-green-800 border-green-300' },
+  FAILED:             { label: 'Failed',             className: 'bg-red-100 text-red-800 border-red-300' },
   UNMATCHED:          { label: 'Unmatched',          className: 'bg-red-50 text-red-700 border-red-200' },
 }
 

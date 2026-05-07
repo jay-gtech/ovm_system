@@ -32,19 +32,19 @@ export const mockOrders: Order[] = [
 ]
 
 export const mockInvoices: Invoice[] = [
-  { id: '1', invoiceNumber: 'INV-2025-0142', orderId: '4', orderNumber: 'PO-2025-0281', vendorName: 'Patel Logistics & Supply', amount: 85000, taxAmount: 15300, totalAmount: 100300, dueDate: '2025-06-15', status: 'SENT', matchStatus: 'MATCHED', isOverdue: false, agingDays: 5, createdAt: '2025-06-01' },
-  { id: '2', invoiceNumber: 'INV-2025-0141', orderId: '3', orderNumber: 'PO-2025-0282', vendorName: 'Mehta Industrial Goods', amount: 320000, taxAmount: 57600, totalAmount: 377600, dueDate: '2025-05-25', status: 'OVERDUE', matchStatus: 'MATCHED', isOverdue: true, agingDays: 12, createdAt: '2025-05-25' },
-  { id: '3', invoiceNumber: 'INV-2025-0140', orderId: '2', orderNumber: 'PO-2025-0283', vendorName: 'Global Electronics Supply', amount: 1700000, taxAmount: 306000, totalAmount: 2006000, dueDate: '2025-06-20', status: 'DRAFT', matchStatus: 'PENDING', isOverdue: false, agingDays: 0, createdAt: '2025-06-02' },
-  { id: '4', invoiceNumber: 'INV-2025-0139', orderId: '5', orderNumber: 'PO-2025-0280', vendorName: 'Rajan Textiles Pvt Ltd', amount: 285000, taxAmount: 51300, totalAmount: 336300, dueDate: '2025-05-30', status: 'PAID', matchStatus: 'MATCHED', isOverdue: false, agingDays: 0, createdAt: '2025-05-20' },
-  { id: '5', invoiceNumber: 'INV-2025-0138', orderId: '6', orderNumber: 'PO-2025-0279', vendorName: 'Global Electronics Supply', amount: 750000, taxAmount: 135000, totalAmount: 885000, dueDate: '2025-05-28', status: 'DISPUTED', matchStatus: 'MISMATCH', isOverdue: true, agingDays: 9, createdAt: '2025-05-18' },
-  { id: '6', invoiceNumber: 'INV-2025-0137', orderId: '7', orderNumber: 'PO-2025-0278', vendorName: 'Mehta Industrial Goods', amount: 560000, taxAmount: 100800, totalAmount: 660800, dueDate: '2025-06-25', status: 'SENT', matchStatus: 'PARTIAL_MATCH', isOverdue: false, agingDays: 2, createdAt: '2025-06-03' },
+  { id: '1', invoiceNumber: 'INV-2025-0142', orderId: '4', orderNumber: 'PO-2025-0281', vendorName: 'Patel Logistics & Supply', amount: 85000, taxAmount: 15300, totalAmount: 100300, paidAmount: 0, outstandingAmount: 100300, dueDate: '2025-06-15', status: 'ISSUED', matchStatus: 'MATCHED', isOverdue: false, agingDays: 5, createdAt: '2025-06-01' },
+  { id: '2', invoiceNumber: 'INV-2025-0141', orderId: '3', orderNumber: 'PO-2025-0282', vendorName: 'Mehta Industrial Goods', amount: 320000, taxAmount: 57600, totalAmount: 377600, paidAmount: 0, outstandingAmount: 377600, dueDate: '2025-05-25', status: 'OVERDUE', matchStatus: 'MATCHED', isOverdue: true, agingDays: 12, createdAt: '2025-05-25' },
+  { id: '3', invoiceNumber: 'INV-2025-0140', orderId: '2', orderNumber: 'PO-2025-0283', vendorName: 'Global Electronics Supply', amount: 1700000, taxAmount: 306000, totalAmount: 2006000, paidAmount: 0, outstandingAmount: 2006000, dueDate: '2025-06-20', status: 'DRAFT', matchStatus: 'PENDING', isOverdue: false, agingDays: 0, createdAt: '2025-06-02' },
+  { id: '4', invoiceNumber: 'INV-2025-0139', orderId: '5', orderNumber: 'PO-2025-0280', vendorName: 'Rajan Textiles Pvt Ltd', amount: 285000, taxAmount: 51300, totalAmount: 336300, paidAmount: 336300, outstandingAmount: 0, dueDate: '2025-05-30', status: 'PAID', matchStatus: 'MATCHED', isOverdue: false, agingDays: 0, createdAt: '2025-05-20' },
+  { id: '5', invoiceNumber: 'INV-2025-0138', orderId: '6', orderNumber: 'PO-2025-0279', vendorName: 'Global Electronics Supply', amount: 750000, taxAmount: 135000, totalAmount: 885000, paidAmount: 0, outstandingAmount: 885000, dueDate: '2025-05-28', status: 'DISPUTED', matchStatus: 'MISMATCH', isOverdue: true, agingDays: 9, createdAt: '2025-05-18' },
+  { id: '6', invoiceNumber: 'INV-2025-0137', orderId: '7', orderNumber: 'PO-2025-0278', vendorName: 'Mehta Industrial Goods', amount: 560000, taxAmount: 100800, totalAmount: 660800, paidAmount: 0, outstandingAmount: 660800, dueDate: '2025-06-25', status: 'ISSUED', matchStatus: 'PARTIAL_MATCH', isOverdue: false, agingDays: 2, createdAt: '2025-06-03' },
 ]
 
 export const mockPayments: Payment[] = [
-  { id: '1', paymentReference: 'TXN-98432', invoiceId: '4', invoiceNumber: 'INV-2025-0139', amount: 336300, paymentDate: '2025-05-30', method: 'NEFT', status: 'MATCHED' },
-  { id: '2', paymentReference: 'TXN-97821', invoiceId: '1', invoiceNumber: 'INV-2025-0142', amount: 100300, paymentDate: '2025-06-05', method: 'RTGS', status: 'MATCHED' },
-  { id: '3', paymentReference: 'TXN-97011', invoiceId: '', invoiceNumber: '', amount: 280000, paymentDate: '2025-06-01', method: 'NEFT', status: 'UNMATCHED' },
-  { id: '4', paymentReference: 'TXN-96544', invoiceId: '', invoiceNumber: '', amount: 450000, paymentDate: '2025-05-29', method: 'IMPS', status: 'UNMATCHED' },
+  { id: '1', payment_reference: 'TXN-98432', invoice_id: '4', amount: 336300, payment_date: '2025-05-30', payment_method: 'BANK_TRANSFER', status: 'RECEIVED', created_at: '2025-05-30' },
+  { id: '2', payment_reference: 'TXN-97821', invoice_id: '1', amount: 100300, payment_date: '2025-06-05', payment_method: 'BANK_TRANSFER', status: 'RECEIVED', created_at: '2025-06-05' },
+  { id: '3', payment_reference: 'TXN-97011', invoice_id: '', amount: 280000, payment_date: '2025-06-01', payment_method: 'BANK_TRANSFER', status: 'PENDING', created_at: '2025-06-01' },
+  { id: '4', payment_reference: 'TXN-96544', invoice_id: '', amount: 450000, payment_date: '2025-05-29', payment_method: 'BANK_TRANSFER', status: 'PENDING', created_at: '2025-05-29' },
 ]
 
 export const mockAlerts: Alert[] = [
@@ -52,8 +52,8 @@ export const mockAlerts: Alert[] = [
   { id: '2', severity: 'CRITICAL', message: 'Three-way match FAILED on INV-2025-0138 — vendor invoice ₹8.85L vs PO ₹7.5L', module: 'Invoices', orderId: '6', createdAt: '2025-06-06T08:30:00Z', isRead: false },
   { id: '3', severity: 'CRITICAL', message: 'PO-2025-0283 vendor not acknowledged — 48hr timer expires in 2 hours', module: 'Orders', orderId: '2', createdAt: '2025-06-06T08:00:00Z', isRead: false },
   { id: '4', severity: 'HIGH', message: '₹2,80,000 payment TXN-97011 unmatched in suspense — needs reconciliation', module: 'Payments', createdAt: '2025-06-05T14:00:00Z', isRead: false },
-  { id: '5', severity: 'HIGH', message: 'PO-2025-0282 GRN completed — customer delivery not created after 2 hours', module: 'Operations', orderId: '3', createdAt: '2025-06-05T11:00:00Z', isRead: true },
-  { id: '6', severity: 'MEDIUM', message: 'Vendor "Southern Raw Materials" reliability score dropped to 2.1 — review recommended', module: 'Vendors', createdAt: '2025-06-04T16:00:00Z', isRead: true },
+  { id: '5', severity: 'HIGH', message: 'PO-2025-0282 GRN completed — customer delivery not created after 2 hours', module: 'Operations', orderId: '3', createdAt: '2025-05-05T11:00:00Z', isRead: true },
+  { id: '6', severity: 'MEDIUM', message: 'Vendor "Southern Raw Materials" reliability score dropped to 2.1 — review recommended', module: 'Vendors', createdAt: '2024-02-20', isRead: true },
 ]
 
 export const mockGRNs: GRN[] = [

@@ -11,7 +11,7 @@ const suggestions = [
 ]
 
 export default function ReconcilePage() {
-  const unmatched = mockPayments.filter(p => p.status === 'UNMATCHED')
+  const unmatched = mockPayments.filter(p => p.status === 'PENDING')
   const unmatchedTotal = unmatched.reduce((a, p) => a + p.amount, 0)
 
   return (
@@ -46,8 +46,8 @@ export default function ReconcilePage() {
             <Card key={payment.id}>
               <div className="border-b border-slate-100 bg-slate-50 px-5 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm font-bold text-brand-600">{payment.paymentReference}</span>
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">UNMATCHED</span>
+                  <span className="font-mono text-sm font-bold text-brand-600">{payment.payment_reference}</span>
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">PENDING</span>
                 </div>
                 <p className="text-lg font-bold text-slate-900">{formatINR(payment.amount)}</p>
               </div>
@@ -57,8 +57,8 @@ export default function ReconcilePage() {
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Payment Details</p>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div><p className="text-xs text-slate-400">Date</p><p className="font-medium text-slate-700">{formatDate(payment.paymentDate)}</p></div>
-                      <div><p className="text-xs text-slate-400">Method</p><p className="font-medium text-slate-700">{payment.method}</p></div>
+                      <div><p className="text-xs text-slate-400">Date</p><p className="font-medium text-slate-700">{formatDate(payment.payment_date)}</p></div>
+                      <div><p className="text-xs text-slate-400">Method</p><p className="font-medium text-slate-700">{payment.payment_method}</p></div>
                       <div><p className="text-xs text-slate-400">Amount</p><p className="font-bold text-slate-900">{formatINR(payment.amount)}</p></div>
                     </div>
                   </div>

@@ -19,11 +19,15 @@ export async function post<T>(url: string, data?: unknown, config?: AxiosRequest
   const res = await client.post<T>(url, data, config)
   return res.data
 }
-export async function put<T>(url: string, data?: unknown): Promise<T> {
-  const res = await client.put<T>(url, data)
+export async function put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  const res = await client.put<T>(url, data, config)
   return res.data
 }
-export async function del<T>(url: string): Promise<T> {
-  const res = await client.delete<T>(url)
+export async function patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  const res = await client.patch<T>(url, data, config)
+  return res.data
+}
+export async function del<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  const res = await client.delete<T>(url, config)
   return res.data
 }

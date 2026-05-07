@@ -12,7 +12,9 @@ export type OrderStatus =
   | 'CLOSED'
   | 'DISPUTED'
 
-export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'DISPUTED'
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELLED' | 'OVERDUE' | 'DISPUTED'
+export type PaymentStatus = 'PENDING' | 'RECEIVED' | 'FAILED' | 'CANCELLED'
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CREDIT_CARD' | 'CHECK' | 'OTHER'
 export type MatchStatus = 'MATCHED' | 'PARTIAL_MATCH' | 'MISMATCH' | 'PENDING'
 export type VendorStatus = 'ACTIVE' | 'PENDING_KYC' | 'SUSPENDED' | 'INACTIVE'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
@@ -60,6 +62,8 @@ export interface Invoice {
   amount: number
   taxAmount: number
   totalAmount: number
+  paidAmount: number
+  outstandingAmount: number
   dueDate: string
   status: InvoiceStatus
   matchStatus: MatchStatus
@@ -70,13 +74,14 @@ export interface Invoice {
 
 export interface Payment {
   id: string
-  paymentReference: string
-  invoiceId: string
-  invoiceNumber: string
+  payment_reference: string
+  invoice_id: string
   amount: number
-  paymentDate: string
-  method: string
-  status: 'MATCHED' | 'UNMATCHED' | 'PENDING'
+  payment_method: PaymentMethod
+  payment_date: string
+  status: PaymentStatus
+  notes?: string
+  created_at: string
 }
 
 export interface Alert {
