@@ -18,35 +18,41 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# Middleware stack — Starlette executes middleware in LIFO (reverse-add) order.
-# Add outermost layers last so they wrap all inner layers.
+# Middleware stack — Starlette builds in LIFO (reverse-add) order, so the
+# LAST middleware added becomes the OUTERMOST layer (runs first on requests).
+#
+# Add order (innermost → outermost):
+#   1. TenantContextMiddleware   — extracts tenant/user from JWT
+#   2. CorrelationIdMiddleware   — assigns X-Request-ID to ContextVar
+#   3. CORSMiddleware            — outermost: intercepts OPTIONS pre-flight
+#                                  before any BaseHTTPMiddleware runs
 #
 # Execution order (request → route handler):
-#   1. CORSMiddleware            — handles OPTIONS pre-flight first
-#   2. CorrelationIdMiddleware   — assigns X-Request-ID to ContextVar
-#   3. TenantContextMiddleware   — extracts tenant/user from JWT (request_id already set)
-#
-# Cleanup order (response ← route handler) is the reverse of the above.
+#   CORSMiddleware → CorrelationIdMiddleware → TenantContextMiddleware → router
 # ---------------------------------------------------------------------------
 
-# CORS must be outermost so pre-flight OPTIONS responses are returned
-# immediately without passing through the correlation middleware.
-if settings.ALLOWED_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[str(origin).rstrip("/") for origin in settings.ALLOWED_ORIGINS],
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
-    )
+# TenantContextMiddleware is innermost: added first so it runs last before routes.
+app.add_middleware(TenantContextMiddleware)
 
-# CorrelationIdMiddleware runs inside CORS so every non-OPTIONS request
-# gets a traceable request_id bound to its ContextVar before hitting routes.
+# CorrelationIdMiddleware wraps TenantContext so every request carries a
+# traceable request_id when tenant extraction runs.
 app.add_middleware(CorrelationIdMiddleware)
 
-# TenantContextMiddleware runs inside CorrelationIdMiddleware to extract
-# tenant/user context from the token after the request is traceable.
-app.add_middleware(TenantContextMiddleware)
+# CORSMiddleware is outermost: added last so it runs first on every request.
+# This guarantees OPTIONS pre-flight responses are returned immediately —
+# before any BaseHTTPMiddleware in the stack can interfere.
+# Vite local development origins are explicitly listed alongside any origins
+# declared in settings.ALLOWED_ORIGINS.
+_all_origins = [str(o).rstrip("/") for o in settings.ALLOWED_ORIGINS]
+_all_origins.extend(["http://localhost:5173", "http://127.0.0.1:5173"])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(set(_all_origins)),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ---------------------------------------------------------------------------
