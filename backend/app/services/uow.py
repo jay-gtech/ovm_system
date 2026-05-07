@@ -7,6 +7,7 @@ from app.repositories.vendor import VendorRepository
 from app.repositories.product import ProductRepository
 from app.repositories.purchase_order import PurchaseOrderRepository, POLineItemRepository
 from app.repositories.invoice import InvoiceRepository, InvoiceLineItemRepository
+from app.repositories.payment import PaymentRepository
 
 
 class BaseUnitOfWork(ABC):
@@ -29,6 +30,7 @@ class BaseUnitOfWork(ABC):
     po_line_items: POLineItemRepository
     invoices: InvoiceRepository
     invoice_line_items: InvoiceLineItemRepository
+    payments: PaymentRepository
 
     async def __aenter__(self):
         return self
@@ -81,6 +83,7 @@ class SQLAlchemyUnitOfWork(BaseUnitOfWork):
         self.po_line_items = POLineItemRepository()
         self.invoices = InvoiceRepository()
         self.invoice_line_items = InvoiceLineItemRepository()
+        self.payments = PaymentRepository()
 
     async def __aenter__(self):
         if self.session is None:

@@ -5,7 +5,7 @@ import redis.asyncio as redis
 import os
 
 # Manual config for validation
-DB_URL = "postgresql+asyncpg://postgres:postgres@localhost:5433/ovm_db"
+DB_URL = "postgresql+asyncpg://postgres:postgres@localhost:5434/ovm_db"
 REDIS_URL = "redis://localhost:6379/0"
 
 async def validate():

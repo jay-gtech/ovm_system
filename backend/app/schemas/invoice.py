@@ -54,6 +54,8 @@ class InvoiceResponse(InvoiceBase):
     status: InvoiceStatus
     subtotal_amount: Decimal
     total_amount: Decimal
+    paid_amount: Decimal
+    outstanding_amount: Decimal
     created_at: datetime
     updated_at: datetime
     line_items: List[InvoiceLineItemResponse]
@@ -68,5 +70,7 @@ class InvoiceListResponse(BaseModel):
     purchase_order_id: Optional[uuid.UUID] = None
     status: InvoiceStatus
     total_amount: Decimal
+    paid_amount: Decimal
+    outstanding_amount: Decimal
     created_at: datetime
     updated_at: datetime

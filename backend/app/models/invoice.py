@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .vendor import Vendor
     from .product import Product
     from .purchase_order import PurchaseOrder
+    from .payment import Payment
 
 class InvoiceStatus(str, Enum):
     DRAFT = "DRAFT"
@@ -90,6 +91,33 @@ class Invoice(FullBaseModel):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
+    payments: Mapped[List["Payment"]] = relationship(
+        "Payment",
+        back_populates="invoice",
+        # FI-3: delete-orphan removed — payments are financial records and must never
+        # be cascade-hard-deleted. SoftDeleteMixin + FK RESTRICT handles integrity.
+        cascade="all, save-update, merge",
+        lazy="selectin"
+    )
+
+    @property
+    def paid_amount(self) -> Decimal:
+        """
+        Calculates the total amount received for this invoice.
+        Safe for use with selectinload.
+        """
+        from .payment import PaymentStatus
+        return sum(
+            (p.amount for p in self.payments if p.status == PaymentStatus.RECEIVED), 
+            Decimal("0.0000")
+        )
+
+    @property
+    def outstanding_amount(self) -> Decimal:
+        """
+        Calculates the remaining balance for this invoice.
+        """
+        return self.total_amount - self.paid_amount
 
     def __repr__(self) -> str:
         return f"<Invoice(invoice_number={self.invoice_number}, status={self.status})>"
