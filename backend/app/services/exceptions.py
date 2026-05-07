@@ -44,3 +44,27 @@ class NotFoundDomainError(DomainError):
     """Raised when a requested domain entity is not found."""
     def __init__(self, message: str, details: Optional[Any] = None):
         super().__init__(message, code="NOT_FOUND_ERROR", details=details)
+
+
+# ---------------------------------------------------------------------------
+# Backward Compatibility Aliases
+# Used by services that have not yet been migrated to the new DomainError hierarchy.
+# ---------------------------------------------------------------------------
+
+class ResourceNotFoundException(NotFoundDomainError):
+    """Backward compatibility exception for missing resources."""
+    def __init__(self, resource: str, identifier: Any):
+        super().__init__(
+            message=f"{resource} with identifier {identifier} not found",
+            details={"resource": resource, "identifier": str(identifier)}
+        )
+
+
+class BusinessRuleViolationException(ValidationDomainError):
+    """Backward compatibility exception for business rule violations."""
+    pass
+
+
+class UnauthorizedException(AuthorizationDomainError):
+    """Backward compatibility exception for authorization failures."""
+    pass
