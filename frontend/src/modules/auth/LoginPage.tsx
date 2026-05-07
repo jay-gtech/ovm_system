@@ -9,7 +9,7 @@ import { authApi } from '../../api/auth'
 import { useAuthStore } from '../../store/authStore'
 
 const schema = z.object({
-  organization_slug: z.string().min(1, 'Organization workspace is required'),
+  workspace: z.string().min(1, 'Organization workspace is required'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
 })
@@ -31,7 +31,11 @@ export default function LoginPage() {
   const onSubmit = async (data: FormValues) => {
     setServerError(null)
     try {
-      const res = await authApi.login(data)
+      const res = await authApi.login({
+        organization_slug: data.workspace,
+        email: data.email,
+        password: data.password,
+      })
       setAuth(res.user, res.access_token)
       navigate('/', { replace: true })
     } catch {
@@ -53,18 +57,18 @@ export default function LoginPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
             <div>
-              <label htmlFor="organization_slug" className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label htmlFor="workspace" className="mb-1.5 block text-sm font-medium text-slate-700">
                 Workspace
               </label>
               <Input
-                id="organization_slug"
+                id="workspace"
                 type="text"
                 autoComplete="organization"
                 placeholder="your-company"
-                {...register('organization_slug')}
+                {...register('workspace')}
               />
-              {errors.organization_slug && (
-                <p className="mt-1 text-xs text-red-500">{errors.organization_slug.message}</p>
+              {errors.workspace && (
+                <p className="mt-1 text-xs text-red-500">{errors.workspace.message}</p>
               )}
             </div>
 
