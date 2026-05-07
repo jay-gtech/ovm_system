@@ -1,5 +1,6 @@
 from app.services.base import BaseService
 from app.services.uow import SQLAlchemyUnitOfWork, BaseUnitOfWork
+from app.services.organization import OrganizationService
 from app.services.exceptions import (
     DomainError,
     ValidationDomainError,
