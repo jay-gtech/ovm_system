@@ -10,6 +10,7 @@ from app.models.product import Product
 from app.models.purchase_order import PurchaseOrder, POLineItem
 from app.models.invoice import Invoice, InvoiceLineItem
 from app.models.payment import Payment
+from app.models.alert import Alert
 
 __all__ = [
     "Base",
@@ -33,4 +34,5 @@ __all__ = [
     "Invoice",
     "InvoiceLineItem",
     "Payment",
+    "Alert",
 ]

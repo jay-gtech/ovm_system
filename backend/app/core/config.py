@@ -54,6 +54,21 @@ class Settings(BaseSettings):
     # SQLAlchemy
     SQLALCHEMY_ECHO: bool = False
 
+    # Scheduler
+    # ---------------------------------------------------------------------------
+    # ENABLE_SCHEDULER must be explicitly set to True only on the single
+    # primary worker that owns background scan jobs.
+    #
+    # DEPLOYMENT RULE — THIS SCHEDULER IS SINGLE-INSTANCE ONLY:
+    #   In a multi-process deployment (gunicorn, uvicorn workers > 1) this flag
+    #   MUST be enabled on exactly ONE worker.  Enabling it on multiple workers
+    #   causes duplicate job execution every scan interval.  It is NOT
+    #   horizontally distributed — there is no leader-election or distributed
+    #   locking.  Set ENABLE_SCHEDULER=true only via a dedicated scheduler
+    #   process (e.g. a separate k8s Deployment with replicas: 1).
+    # ---------------------------------------------------------------------------
+    ENABLE_SCHEDULER: bool = False
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:

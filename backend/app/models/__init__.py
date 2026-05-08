@@ -9,6 +9,7 @@ from .purchase_order import PurchaseOrder, POLineItem, PurchaseOrderStatus
 from .invoice import Invoice, InvoiceLineItem, InvoiceStatus
 from .payment import Payment, PaymentStatus
 from .vendor_settlement import VendorSettlement, SettlementStatus
+from .alert import Alert, AlertStatus, AlertSeverity, AlertType
 
 __all__ = [
     "Organization",
@@ -31,4 +32,8 @@ __all__ = [
     "PaymentStatus",
     "VendorSettlement",
     "SettlementStatus",
+    "Alert",
+    "AlertStatus",
+    "AlertSeverity",
+    "AlertType",
 ]

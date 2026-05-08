@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, health, organizations, users, vendors, products,
     purchase_orders, invoices, payments, vendor_settlements, monitoring, audit,
+    alerts,
 )
 
 api_router = APIRouter()
@@ -17,3 +18,4 @@ api_router.include_router(payments.router, prefix="/payments", tags=["payments"]
 api_router.include_router(vendor_settlements.router, prefix="/settlements", tags=["vendor-settlements"])
 api_router.include_router(monitoring.router, prefix="/monitoring", tags=["monitoring"])
 api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
+api_router.include_router(alerts.router, prefix="/alerts", tags=["alerts"])

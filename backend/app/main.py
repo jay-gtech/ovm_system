@@ -62,11 +62,26 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event() -> None:
     logger.info("OVM System starting up — environment: %s", settings.ENVIRONMENT)
+    if settings.ENABLE_SCHEDULER:
+        from app.core.scheduler import scheduler, setup_scheduler
+        setup_scheduler()
+        scheduler.start()
+        logger.info("Background alert scanner scheduler started (ENABLE_SCHEDULER=true).")
+    else:
+        logger.info(
+            "Background scheduler DISABLED (ENABLE_SCHEDULER=false). "
+            "Set ENABLE_SCHEDULER=true on exactly ONE primary worker to enable scans."
+        )
 
 
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
     logger.info("OVM System shutting down.")
+    if settings.ENABLE_SCHEDULER:
+        from app.core.scheduler import scheduler
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+            logger.info("Background scheduler shut down.")
 
 
 # ---------------------------------------------------------------------------

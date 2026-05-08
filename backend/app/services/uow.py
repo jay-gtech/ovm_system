@@ -10,6 +10,7 @@ from app.repositories.invoice import InvoiceRepository, InvoiceLineItemRepositor
 from app.repositories.payment import PaymentRepository
 from app.repositories.vendor_settlement import VendorSettlementRepository
 from app.repositories.audit import AuditRepository
+from app.repositories.alert import AlertRepository
 
 
 class BaseUnitOfWork(ABC):
@@ -35,6 +36,7 @@ class BaseUnitOfWork(ABC):
     payments: PaymentRepository
     vendor_settlements: VendorSettlementRepository
     audit_logs: AuditRepository
+    alerts: AlertRepository
 
     async def __aenter__(self):
         return self
@@ -90,6 +92,7 @@ class SQLAlchemyUnitOfWork(BaseUnitOfWork):
         self.payments = PaymentRepository()
         self.vendor_settlements = VendorSettlementRepository()
         self.audit_logs = AuditRepository()
+        self.alerts = AlertRepository()
 
     async def __aenter__(self):
         if self.session is None:
