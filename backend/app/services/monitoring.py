@@ -37,13 +37,19 @@ class MonitoringService:
         return aging_days if aging_days > 0 else 0, is_overdue
 
     async def get_outstanding_invoices(self, limit: int = 100, offset: int = 0) -> List[OutstandingInvoiceResponse]:
+        paid_subq = select(func.coalesce(func.sum(Payment.amount), Decimal("0.0000"))).where(
+            Payment.invoice_id == Invoice.id,
+            Payment.status == PaymentStatus.RECEIVED,
+            Payment.is_deleted.is_(False)
+        ).scalar_subquery()
+
         query = select(Invoice).options(
             selectinload(Invoice.vendor)
         ).where(Invoice.status.in_([InvoiceStatus.DRAFT, InvoiceStatus.ISSUED]))
         query = apply_tenant_scope(query, Invoice)
         query = query.where(
             Invoice.is_deleted.is_(False),
-            Invoice.outstanding_amount > 0
+            (Invoice.total_amount - paid_subq) > 0
         ).limit(limit).offset(offset)
         
         result = await self.db.execute(query)
@@ -122,7 +128,8 @@ class MonitoringService:
             selectinload(Payment.invoice).selectinload(Invoice.vendor)
         ).where(
             Payment.status == PaymentStatus.RECEIVED,
-            Payment.is_deleted.is_(False)
+            Payment.is_deleted.is_(False),
+            Payment.amount > func.coalesce(settled_subq.c.settled_amount, Decimal("0.0000"))
         )
         query = apply_tenant_scope(query, Payment)
         query = query.limit(limit).offset(offset)
@@ -132,23 +139,22 @@ class MonitoringService:
         
         response = []
         for p, settled_sum in rows:
-            if settled_sum < p.amount:
-                response.append(UnsettledPaymentResponse(
-                    id=p.id,
-                    payment_reference=p.payment_reference,
-                    amount=p.amount,
-                    settlement_total=settled_sum,
-                    unsettled_amount=p.amount - settled_sum,
-                    invoice=InvoiceLinkage(
-                        id=p.invoice.id,
-                        invoice_number=p.invoice.invoice_number
-                    ),
-                    vendor=VendorLinkage(
-                        id=p.invoice.vendor.id,
-                        vendor_code=p.invoice.vendor.vendor_code,
-                        legal_name=p.invoice.vendor.legal_name
-                    )
-                ))
+            response.append(UnsettledPaymentResponse(
+                id=p.id,
+                payment_reference=p.payment_reference,
+                amount=p.amount,
+                settlement_total=settled_sum,
+                unsettled_amount=p.amount - settled_sum,
+                invoice=InvoiceLinkage(
+                    id=p.invoice.id,
+                    invoice_number=p.invoice.invoice_number
+                ),
+                vendor=VendorLinkage(
+                    id=p.invoice.vendor.id,
+                    vendor_code=p.invoice.vendor.vendor_code,
+                    legal_name=p.invoice.vendor.legal_name
+                )
+            ))
         return response
 
     async def get_pending_settlements(self, limit: int = 100, offset: int = 0) -> List[PendingSettlementResponse]:
@@ -184,9 +190,15 @@ class MonitoringService:
         return response
 
     async def get_financial_summary(self) -> FinancialSummaryResponse:
-        inv_query = select(func.sum(Invoice.outstanding_amount)).where(
+        paid_subq = select(func.coalesce(func.sum(Payment.amount), Decimal("0.0000"))).where(
+            Payment.invoice_id == Invoice.id,
+            Payment.status == PaymentStatus.RECEIVED,
+            Payment.is_deleted.is_(False)
+        ).scalar_subquery()
+
+        inv_query = select(func.sum(Invoice.total_amount - paid_subq)).where(
             Invoice.status.in_([InvoiceStatus.DRAFT, InvoiceStatus.ISSUED]),
-            Invoice.outstanding_amount > 0,
+            (Invoice.total_amount - paid_subq) > 0,
             Invoice.is_deleted.is_(False)
         )
         inv_query = apply_tenant_scope(inv_query, Invoice)

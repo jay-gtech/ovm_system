@@ -1,6 +1,6 @@
 import uuid
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 from app.models.invoice import InvoiceStatus
@@ -33,6 +33,7 @@ class InvoiceLineItemResponse(BaseModel):
 class InvoiceBase(BaseModel):
     vendor_id: uuid.UUID
     purchase_order_id: Optional[uuid.UUID] = None
+    due_date: Optional[date] = None
     notes: Optional[str] = None
 
 class InvoiceCreate(InvoiceBase):
@@ -68,6 +69,7 @@ class InvoiceListResponse(BaseModel):
     invoice_number: str
     vendor_id: uuid.UUID
     purchase_order_id: Optional[uuid.UUID] = None
+    due_date: Optional[date] = None
     status: InvoiceStatus
     total_amount: Decimal
     paid_amount: Decimal

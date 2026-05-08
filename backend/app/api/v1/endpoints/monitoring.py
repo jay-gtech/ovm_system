@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_user, check_role
@@ -17,8 +17,8 @@ router = APIRouter()
 
 @router.get("/outstanding-invoices", response_model=List[OutstandingInvoiceResponse])
 async def get_outstanding_invoices(
-    limit: int = 100,
-    offset: int = 0,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(check_role(["ADMIN", "MANAGER", "ACCOUNTS"])),
 ):
@@ -30,8 +30,8 @@ async def get_outstanding_invoices(
 
 @router.get("/pending-payments", response_model=List[PendingPaymentResponse])
 async def get_pending_payments(
-    limit: int = 100,
-    offset: int = 0,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(check_role(["ADMIN", "MANAGER", "ACCOUNTS"])),
 ):
@@ -43,8 +43,8 @@ async def get_pending_payments(
 
 @router.get("/unsettled-payments", response_model=List[UnsettledPaymentResponse])
 async def get_unsettled_payments(
-    limit: int = 100,
-    offset: int = 0,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(check_role(["ADMIN", "MANAGER", "ACCOUNTS"])),
 ):
@@ -56,8 +56,8 @@ async def get_unsettled_payments(
 
 @router.get("/pending-settlements", response_model=List[PendingSettlementResponse])
 async def get_pending_settlements(
-    limit: int = 100,
-    offset: int = 0,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(check_role(["ADMIN", "MANAGER", "ACCOUNTS"])),
 ):

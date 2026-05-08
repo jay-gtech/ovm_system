@@ -1,5 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
-import { monitoringApi } from '../../../api/monitoring'
+import { usePendingSettlements } from '../hooks/useMonitoring'
 import { Card } from '../../../components/ui/Card'
 import { Table, Th, Td } from '../../../components/ui/Table'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -7,10 +6,7 @@ import { formatINR } from '../../../utils/format'
 import { Loader } from '../../../components/feedback/Loader'
 
 export function PendingSettlementsTable() {
-  const { data: settlements, isLoading, isError } = useQuery({
-    queryKey: ['monitoring', 'pending-settlements'],
-    queryFn: () => monitoringApi.getPendingSettlements()
-  })
+  const { data: settlements, isLoading, isError } = usePendingSettlements()
 
   if (isLoading) return <Card className="p-6 flex justify-center"><Loader /></Card>
   if (isError) return <Card className="p-6 text-red-500">Failed to load pending settlements.</Card>

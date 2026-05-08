@@ -15,9 +15,9 @@ export interface OutstandingInvoiceResponse {
   id: string
   invoice_number: string
   status: string
-  total_amount: number
-  paid_amount: number
-  outstanding_amount: number
+  total_amount: string
+  paid_amount: string
+  outstanding_amount: string
   aging_days: number
   is_overdue: boolean
   vendor: VendorLinkage
@@ -26,7 +26,7 @@ export interface OutstandingInvoiceResponse {
 export interface PendingPaymentResponse {
   id: string
   payment_reference: string
-  amount: number
+  amount: string
   status: string
   aging_days: number
   invoice: InvoiceLinkage
@@ -36,9 +36,9 @@ export interface PendingPaymentResponse {
 export interface UnsettledPaymentResponse {
   id: string
   payment_reference: string
-  amount: number
-  settlement_total: number
-  unsettled_amount: number
+  amount: string
+  settlement_total: string
+  unsettled_amount: string
   invoice: InvoiceLinkage
   vendor: VendorLinkage
 }
@@ -46,7 +46,7 @@ export interface UnsettledPaymentResponse {
 export interface PendingSettlementResponse {
   id: string
   settlement_reference: string
-  amount: number
+  amount: string
   status: string
   aging_days: number
   vendor: VendorLinkage
@@ -54,10 +54,10 @@ export interface PendingSettlementResponse {
 }
 
 export interface FinancialSummaryResponse {
-  total_outstanding_invoices: number
-  total_pending_payments: number
-  total_unsettled_liabilities: number
-  total_pending_settlements: number
+  total_outstanding_invoices: string
+  total_pending_payments: string
+  total_unsettled_liabilities: string
+  total_pending_settlements: string
 }
 
 export const monitoringApi = {

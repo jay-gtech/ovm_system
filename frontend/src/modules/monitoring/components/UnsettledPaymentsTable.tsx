@@ -1,15 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
-import { monitoringApi } from '../../../api/monitoring'
+import { useUnsettledPayments } from '../hooks/useMonitoring'
 import { Card } from '../../../components/ui/Card'
 import { Table, Th, Td } from '../../../components/ui/Table'
 import { formatINR } from '../../../utils/format'
 import { Loader } from '../../../components/feedback/Loader'
 
 export function UnsettledPaymentsTable() {
-  const { data: unsettled, isLoading, isError } = useQuery({
-    queryKey: ['monitoring', 'unsettled-payments'],
-    queryFn: () => monitoringApi.getUnsettledPayments()
-  })
+  const { data: unsettled, isLoading, isError } = useUnsettledPayments()
 
   if (isLoading) return <Card className="p-6 flex justify-center"><Loader /></Card>
   if (isError) return <Card className="p-6 text-red-500">Failed to load unsettled payments.</Card>

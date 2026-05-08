@@ -1,14 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
-import { monitoringApi } from '../../../api/monitoring'
+import { useFinancialSummary } from '../hooks/useMonitoring'
 import { Card } from '../../../components/ui/Card'
 import { formatINR } from '../../../utils/format'
 import { AlertCircle, FileText, CreditCard, Clock } from 'lucide-react'
 
 export function MonitoringSummaryCard() {
-  const { data: summary, isLoading, isError } = useQuery({
-    queryKey: ['monitoring', 'financial-summary'],
-    queryFn: () => monitoringApi.getFinancialSummary()
-  })
+  const { data: summary, isLoading, isError } = useFinancialSummary()
 
   if (isLoading) {
     return <Card className="p-6 h-32 flex items-center justify-center">Loading summary...</Card>

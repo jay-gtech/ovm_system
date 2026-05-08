@@ -116,6 +116,7 @@ class InvoiceService(BaseService):
                 invoice_number=data.invoice_number,
                 vendor_id=data.vendor_id,
                 purchase_order_id=data.purchase_order_id,
+                due_date=data.due_date,
                 status=InvoiceStatus.DRAFT,
                 subtotal_amount=subtotal,
                 total_amount=subtotal,  # No tax/shipping in foundation

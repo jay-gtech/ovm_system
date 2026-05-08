@@ -1,5 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
-import { monitoringApi } from '../../../api/monitoring'
+import { useOutstandingInvoices } from '../hooks/useMonitoring'
 import { Card } from '../../../components/ui/Card'
 import { Table, Th, Td } from '../../../components/ui/Table'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -7,10 +6,7 @@ import { formatINR } from '../../../utils/format'
 import { Loader } from '../../../components/feedback/Loader'
 
 export function OutstandingInvoicesTable() {
-  const { data: invoices, isLoading, isError } = useQuery({
-    queryKey: ['monitoring', 'outstanding-invoices'],
-    queryFn: () => monitoringApi.getOutstandingInvoices()
-  })
+  const { data: invoices, isLoading, isError } = useOutstandingInvoices()
 
   if (isLoading) return <Card className="p-6 flex justify-center"><Loader /></Card>
   if (isError) return <Card className="p-6 text-red-500">Failed to load outstanding invoices.</Card>

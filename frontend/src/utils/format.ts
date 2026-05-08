@@ -1,5 +1,9 @@
-export function formatINR(amount: number): string {
-  return '₹' + amount.toLocaleString('en-IN')
+export function formatINR(amount: number | string): string {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return '₹' + num.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
 }
 
 export function formatDate(dateStr: string): string {
