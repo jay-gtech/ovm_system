@@ -1,8 +1,9 @@
+from datetime import date
 import uuid
 from decimal import Decimal
 from enum import Enum
 from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import String, Text, Numeric, UniqueConstraint, ForeignKey, UUID
+from sqlalchemy import String, Text, Numeric, UniqueConstraint, ForeignKey, UUID, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import FullBaseModel
 
@@ -62,6 +63,12 @@ class Invoice(FullBaseModel):
         String(20), 
         default=InvoiceStatus.DRAFT, 
         nullable=False
+    )
+    
+    due_date: Mapped[Optional[date]] = mapped_column(
+        Date,
+        index=True,
+        nullable=True
     )
     
     subtotal_amount: Mapped[Decimal] = mapped_column(

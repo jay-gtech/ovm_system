@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from decimal import Decimal
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -28,24 +28,30 @@ class MonitoringService:
         now = datetime.now(timezone.utc)
         return (now - created_at).days
 
-    async def get_outstanding_invoices(self) -> List[OutstandingInvoiceResponse]:
+    def _calculate_due_aging(self, due_date: Optional[date]) -> Tuple[int, bool]:
+        if not due_date:
+            return 0, False
+        now_date = datetime.now(timezone.utc).date()
+        aging_days = (now_date - due_date).days
+        is_overdue = due_date < now_date
+        return aging_days if aging_days > 0 else 0, is_overdue
+
+    async def get_outstanding_invoices(self, limit: int = 100, offset: int = 0) -> List[OutstandingInvoiceResponse]:
         query = select(Invoice).options(
-            selectinload(Invoice.vendor),
-            selectinload(Invoice.payments)
+            selectinload(Invoice.vendor)
         ).where(Invoice.status.in_([InvoiceStatus.DRAFT, InvoiceStatus.ISSUED]))
         query = apply_tenant_scope(query, Invoice)
         query = query.where(
             Invoice.is_deleted.is_(False),
             Invoice.outstanding_amount > 0
-        )
+        ).limit(limit).offset(offset)
         
         result = await self.db.execute(query)
         invoices = result.scalars().all()
         
         response = []
         for inv in invoices:
-            aging_days = self._calculate_aging_days(inv.created_at)
-            is_overdue = aging_days > 30  # Assuming standard 30-day terms for monitoring
+            aging_days, is_overdue = self._calculate_due_aging(inv.due_date)
             
             response.append(OutstandingInvoiceResponse(
                 id=inv.id,
@@ -64,12 +70,12 @@ class MonitoringService:
             ))
         return response
 
-    async def get_pending_payments(self) -> List[PendingPaymentResponse]:
+    async def get_pending_payments(self, limit: int = 100, offset: int = 0) -> List[PendingPaymentResponse]:
         query = select(Payment).options(
             selectinload(Payment.invoice).selectinload(Invoice.vendor)
         ).where(Payment.status == PaymentStatus.PENDING)
         query = apply_tenant_scope(query, Payment)
-        query = query.where(Payment.is_deleted.is_(False))
+        query = query.where(Payment.is_deleted.is_(False)).limit(limit).offset(offset)
         
         result = await self.db.execute(query)
         payments = result.scalars().all()
@@ -95,7 +101,7 @@ class MonitoringService:
             ))
         return response
 
-    async def get_unsettled_payments(self) -> List[UnsettledPaymentResponse]:
+    async def get_unsettled_payments(self, limit: int = 100, offset: int = 0) -> List[UnsettledPaymentResponse]:
         # A payment is unsettled if it is RECEIVED but its amount > sum of associated settlements
         settled_subq = select(
             VendorSettlement.payment_id,
@@ -119,6 +125,7 @@ class MonitoringService:
             Payment.is_deleted.is_(False)
         )
         query = apply_tenant_scope(query, Payment)
+        query = query.limit(limit).offset(offset)
         
         result = await self.db.execute(query)
         rows = result.all()
@@ -144,13 +151,13 @@ class MonitoringService:
                 ))
         return response
 
-    async def get_pending_settlements(self) -> List[PendingSettlementResponse]:
+    async def get_pending_settlements(self, limit: int = 100, offset: int = 0) -> List[PendingSettlementResponse]:
         query = select(VendorSettlement).options(
             selectinload(VendorSettlement.vendor),
             selectinload(VendorSettlement.invoice)
         ).where(VendorSettlement.status == SettlementStatus.PENDING)
         query = apply_tenant_scope(query, VendorSettlement)
-        query = query.where(VendorSettlement.is_deleted.is_(False))
+        query = query.where(VendorSettlement.is_deleted.is_(False)).limit(limit).offset(offset)
         
         result = await self.db.execute(query)
         settlements = result.scalars().all()
