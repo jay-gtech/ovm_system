@@ -14,6 +14,7 @@ const Payments   = lazy(() => import('../modules/payments/PaymentsPage'))
 const GRN        = lazy(() => import('../modules/grn/GRNPage'))
 const Reconcile  = lazy(() => import('../modules/reconcile/ReconcilePage'))
 const Alerts     = lazy(() => import('../modules/alerts/AlertsPage'))
+const Monitoring = lazy(() => import('../modules/monitoring/MonitoringPage'))
 const Reports    = lazy(() => import('../modules/reports/ReportsPage'))
 const Settings   = lazy(() => import('../modules/settings/SettingsPage'))
 
@@ -49,6 +50,7 @@ export function AppRoutes() {
         <Route path="/grn"       element={<Suspense fallback={<PageLoader/>}><GRN/></Suspense>} />
         <Route path="/reconcile" element={<Suspense fallback={<PageLoader/>}><Reconcile/></Suspense>} />
         <Route path="/alerts"    element={<Suspense fallback={<PageLoader/>}><Alerts/></Suspense>} />
+        <Route path="/monitoring" element={<Suspense fallback={<PageLoader/>}><Monitoring/></Suspense>} />
         <Route path="/reports"   element={<Suspense fallback={<PageLoader/>}><Reports/></Suspense>} />
         <Route path="/settings"  element={<Suspense fallback={<PageLoader/>}><Settings/></Suspense>} />
         <Route path="*"          element={<Navigate to="/" replace />} />
