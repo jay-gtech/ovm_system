@@ -18,6 +18,12 @@ export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CREDIT_CARD' | 'CHECK' |
 export type MatchStatus = 'MATCHED' | 'PARTIAL_MATCH' | 'MISMATCH' | 'PENDING'
 export type VendorStatus = 'ACTIVE' | 'PENDING_KYC' | 'SUSPENDED' | 'INACTIVE'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+export type AlertStatus = 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED'
+export type AlertType =
+  | 'OVERDUE_INVOICE'
+  | 'UNSETTLED_VENDOR_LIABILITY'
+  | 'WORKFLOW_STALL'
+  | 'HIGH_FINANCIAL_EXPOSURE'
 export type UserRole = 'admin' | 'manager' | 'procurement' | 'accounts' | 'operations' | 'vendor'
 
 export interface Vendor {
@@ -59,11 +65,11 @@ export interface Invoice {
   orderId: string
   orderNumber: string
   vendorName: string
-  amount: string
-  taxAmount: string
-  totalAmount: string
-  paidAmount: string
-  outstandingAmount: string
+  amount: number
+  taxAmount: number
+  totalAmount: number
+  paidAmount: number
+  outstandingAmount: number
   dueDate: string
   status: InvoiceStatus
   matchStatus: MatchStatus
@@ -76,7 +82,7 @@ export interface Payment {
   id: string
   payment_reference: string
   invoice_id: string
-  amount: string
+  amount: number
   payment_method: PaymentMethod
   payment_date: string
   status: PaymentStatus
@@ -92,6 +98,31 @@ export interface Alert {
   orderId?: string
   createdAt: string
   isRead: boolean
+}
+
+export interface BackendAlert {
+  id: string
+  organization_id: string
+  alert_type: AlertType
+  severity: AlertSeverity
+  entity_type: string
+  entity_id: string
+  title: string
+  message: string
+  status: AlertStatus
+  triggered_at: string
+  acknowledged_at?: string | null
+  resolved_at?: string | null
+  acknowledged_by_user_id?: string | null
+  resolved_by_user_id?: string | null
+  metadata_json?: Record<string, unknown> | null
+}
+
+export interface BackendAlertList {
+  items: BackendAlert[]
+  total: number
+  skip: number
+  limit: number
 }
 
 export interface GRN {
