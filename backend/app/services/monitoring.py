@@ -34,32 +34,34 @@ class MonitoringService:
             selectinload(Invoice.payments)
         ).where(Invoice.status.in_([InvoiceStatus.DRAFT, InvoiceStatus.ISSUED]))
         query = apply_tenant_scope(query, Invoice)
-        query = query.where(Invoice.is_deleted.is_(False))
+        query = query.where(
+            Invoice.is_deleted.is_(False),
+            Invoice.outstanding_amount > 0
+        )
         
         result = await self.db.execute(query)
         invoices = result.scalars().all()
         
         response = []
         for inv in invoices:
-            if inv.outstanding_amount > 0:
-                aging_days = self._calculate_aging_days(inv.created_at)
-                is_overdue = aging_days > 30  # Assuming standard 30-day terms for monitoring
-                
-                response.append(OutstandingInvoiceResponse(
-                    id=inv.id,
-                    invoice_number=inv.invoice_number,
-                    status=inv.status,
-                    total_amount=inv.total_amount,
-                    paid_amount=inv.paid_amount,
-                    outstanding_amount=inv.outstanding_amount,
-                    aging_days=aging_days,
-                    is_overdue=is_overdue,
-                    vendor=VendorLinkage(
-                        id=inv.vendor.id,
-                        vendor_code=inv.vendor.vendor_code,
-                        legal_name=inv.vendor.legal_name
-                    )
-                ))
+            aging_days = self._calculate_aging_days(inv.created_at)
+            is_overdue = aging_days > 30  # Assuming standard 30-day terms for monitoring
+            
+            response.append(OutstandingInvoiceResponse(
+                id=inv.id,
+                invoice_number=inv.invoice_number,
+                status=inv.status,
+                total_amount=inv.total_amount,
+                paid_amount=inv.paid_amount,
+                outstanding_amount=inv.outstanding_amount,
+                aging_days=aging_days,
+                is_overdue=is_overdue,
+                vendor=VendorLinkage(
+                    id=inv.vendor.id,
+                    vendor_code=inv.vendor.vendor_code,
+                    legal_name=inv.vendor.legal_name
+                )
+            ))
         return response
 
     async def get_pending_payments(self) -> List[PendingPaymentResponse]:
@@ -95,26 +97,34 @@ class MonitoringService:
 
     async def get_unsettled_payments(self) -> List[UnsettledPaymentResponse]:
         # A payment is unsettled if it is RECEIVED but its amount > sum of associated settlements
-        query = select(Payment).options(
+        settled_subq = select(
+            VendorSettlement.payment_id,
+            func.sum(VendorSettlement.amount).label('settled_amount')
+        ).where(
+            VendorSettlement.status == SettlementStatus.SETTLED,
+            VendorSettlement.is_deleted.is_(False)
+        )
+        settled_subq = apply_tenant_scope(settled_subq, VendorSettlement)
+        settled_subq = settled_subq.group_by(VendorSettlement.payment_id).subquery()
+
+        query = select(
+            Payment,
+            func.coalesce(settled_subq.c.settled_amount, Decimal("0.0000")).label('settled_sum')
+        ).outerjoin(
+            settled_subq, Payment.id == settled_subq.c.payment_id
+        ).options(
             selectinload(Payment.invoice).selectinload(Invoice.vendor)
-        ).where(Payment.status == PaymentStatus.RECEIVED)
+        ).where(
+            Payment.status == PaymentStatus.RECEIVED,
+            Payment.is_deleted.is_(False)
+        )
         query = apply_tenant_scope(query, Payment)
-        query = query.where(Payment.is_deleted.is_(False))
         
         result = await self.db.execute(query)
-        payments = result.scalars().all()
+        rows = result.all()
         
         response = []
-        for p in payments:
-            # Subquery to get settlement total for this payment
-            settlement_query = select(func.sum(VendorSettlement.amount)).where(
-                VendorSettlement.payment_id == p.id,
-                VendorSettlement.status == SettlementStatus.SETTLED,
-                VendorSettlement.is_deleted.is_(False)
-            )
-            settlement_result = await self.db.execute(settlement_query)
-            settled_sum = settlement_result.scalar() or Decimal("0.0000")
-            
+        for p, settled_sum in rows:
             if settled_sum < p.amount:
                 response.append(UnsettledPaymentResponse(
                     id=p.id,
@@ -167,14 +177,53 @@ class MonitoringService:
         return response
 
     async def get_financial_summary(self) -> FinancialSummaryResponse:
-        outstanding_invoices = await self.get_outstanding_invoices()
-        pending_payments = await self.get_pending_payments()
-        unsettled_payments = await self.get_unsettled_payments()
-        pending_settlements = await self.get_pending_settlements()
-        
+        inv_query = select(func.sum(Invoice.outstanding_amount)).where(
+            Invoice.status.in_([InvoiceStatus.DRAFT, InvoiceStatus.ISSUED]),
+            Invoice.outstanding_amount > 0,
+            Invoice.is_deleted.is_(False)
+        )
+        inv_query = apply_tenant_scope(inv_query, Invoice)
+        inv_sum = (await self.db.execute(inv_query)).scalar() or Decimal("0.0000")
+
+        pay_query = select(func.sum(Payment.amount)).where(
+            Payment.status == PaymentStatus.PENDING,
+            Payment.is_deleted.is_(False)
+        )
+        pay_query = apply_tenant_scope(pay_query, Payment)
+        pay_sum = (await self.db.execute(pay_query)).scalar() or Decimal("0.0000")
+
+        settle_query = select(func.sum(VendorSettlement.amount)).where(
+            VendorSettlement.status == SettlementStatus.PENDING,
+            VendorSettlement.is_deleted.is_(False)
+        )
+        settle_query = apply_tenant_scope(settle_query, VendorSettlement)
+        settle_sum = (await self.db.execute(settle_query)).scalar() or Decimal("0.0000")
+
+        settled_subq = select(
+            VendorSettlement.payment_id,
+            func.sum(VendorSettlement.amount).label('settled_amount')
+        ).where(
+            VendorSettlement.status == SettlementStatus.SETTLED,
+            VendorSettlement.is_deleted.is_(False)
+        )
+        settled_subq = apply_tenant_scope(settled_subq, VendorSettlement)
+        settled_subq = settled_subq.group_by(VendorSettlement.payment_id).subquery()
+
+        unsettled_query = select(
+            func.sum(Payment.amount - func.coalesce(settled_subq.c.settled_amount, Decimal("0.0000")))
+        ).outerjoin(
+            settled_subq, Payment.id == settled_subq.c.payment_id
+        ).where(
+            Payment.status == PaymentStatus.RECEIVED,
+            Payment.is_deleted.is_(False),
+            Payment.amount > func.coalesce(settled_subq.c.settled_amount, Decimal("0.0000"))
+        )
+        unsettled_query = apply_tenant_scope(unsettled_query, Payment)
+        unsettled_sum = (await self.db.execute(unsettled_query)).scalar() or Decimal("0.0000")
+
         return FinancialSummaryResponse(
-            total_outstanding_invoices=sum((inv.outstanding_amount for inv in outstanding_invoices), Decimal("0.0000")),
-            total_pending_payments=sum((p.amount for p in pending_payments), Decimal("0.0000")),
-            total_unsettled_liabilities=sum((p.unsettled_amount for p in unsettled_payments), Decimal("0.0000")),
-            total_pending_settlements=sum((s.amount for s in pending_settlements), Decimal("0.0000"))
+            total_outstanding_invoices=inv_sum,
+            total_pending_payments=pay_sum,
+            total_unsettled_liabilities=unsettled_sum,
+            total_pending_settlements=settle_sum
         )
