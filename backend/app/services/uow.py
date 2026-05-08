@@ -11,6 +11,8 @@ from app.repositories.payment import PaymentRepository
 from app.repositories.vendor_settlement import VendorSettlementRepository
 from app.repositories.audit import AuditRepository
 from app.repositories.alert import AlertRepository
+from app.repositories.sla_policy import SLAPolicyRepository
+from app.repositories.notification import NotificationRepository
 
 
 class BaseUnitOfWork(ABC):
@@ -37,6 +39,8 @@ class BaseUnitOfWork(ABC):
     vendor_settlements: VendorSettlementRepository
     audit_logs: AuditRepository
     alerts: AlertRepository
+    sla_policies: SLAPolicyRepository
+    notifications: NotificationRepository
 
     async def __aenter__(self):
         return self
@@ -93,6 +97,8 @@ class SQLAlchemyUnitOfWork(BaseUnitOfWork):
         self.vendor_settlements = VendorSettlementRepository()
         self.audit_logs = AuditRepository()
         self.alerts = AlertRepository()
+        self.sla_policies = SLAPolicyRepository()
+        self.notifications = NotificationRepository()
 
     async def __aenter__(self):
         if self.session is None:

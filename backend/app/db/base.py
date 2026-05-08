@@ -11,6 +11,8 @@ from app.models.purchase_order import PurchaseOrder, POLineItem
 from app.models.invoice import Invoice, InvoiceLineItem
 from app.models.payment import Payment
 from app.models.alert import Alert
+from app.models.sla_policy import SLAPolicy
+from app.models.notification import Notification
 
 __all__ = [
     "Base",
@@ -35,4 +37,6 @@ __all__ = [
     "InvoiceLineItem",
     "Payment",
     "Alert",
+    "SLAPolicy",
+    "Notification",
 ]

@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
-from sqlalchemy import String, Text, UUID, ForeignKey, DateTime, Index, text
+from sqlalchemy import String, Text, UUID, ForeignKey, DateTime, Index, Integer, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -108,6 +108,23 @@ class Alert(TenantBaseModel):
     )
     metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(
         JSONB, nullable=True
+    )
+
+    # ------------------------------------------------------------------
+    # SLA / Escalation fields (Task 2)
+    # ------------------------------------------------------------------
+    # 0 = not yet escalated; 1 = escalated once; 2 = critically escalated.
+    # Transitions are append-only (no downgrade) and enforced by SLAService.
+    escalation_level: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, index=True
+    )
+    # Timestamp of the first escalation (set once; never reset).
+    escalated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Timestamp when the resolution SLA window expired (set once; never reset).
+    sla_breached_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
     )
 
     acknowledged_by: Mapped[Optional["User"]] = relationship(

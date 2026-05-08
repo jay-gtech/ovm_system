@@ -10,6 +10,8 @@ from .invoice import Invoice, InvoiceLineItem, InvoiceStatus
 from .payment import Payment, PaymentStatus
 from .vendor_settlement import VendorSettlement, SettlementStatus
 from .alert import Alert, AlertStatus, AlertSeverity, AlertType
+from .sla_policy import SLAPolicy
+from .notification import Notification, NotificationChannel, NotificationStatus, NotificationType
 
 __all__ = [
     "Organization",
@@ -36,4 +38,9 @@ __all__ = [
     "AlertStatus",
     "AlertSeverity",
     "AlertType",
+    "SLAPolicy",
+    "Notification",
+    "NotificationChannel",
+    "NotificationStatus",
+    "NotificationType",
 ]

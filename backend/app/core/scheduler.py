@@ -26,6 +26,7 @@ def setup_scheduler() -> None:
         scan_workflow_stalls,
         scan_high_exposure,
     )
+    from app.jobs.sla_scanner import scan_sla_evaluations
 
     scheduler.add_job(
         scan_overdue_invoices,
@@ -60,6 +61,16 @@ def setup_scheduler() -> None:
         misfire_grace_time=300,
     )
 
+    scheduler.add_job(
+        scan_sla_evaluations,
+        trigger="interval",
+        minutes=15,
+        id="sla_evaluation_scan",
+        replace_existing=True,
+        misfire_grace_time=120,
+    )
+
     logger.info(
-        "Scheduler configured: overdue(1h), unsettled(1h), stall(6h), exposure(1h)"
+        "Scheduler configured: overdue(1h), unsettled(1h), stall(6h), "
+        "exposure(1h), sla_eval(15m)"
     )
