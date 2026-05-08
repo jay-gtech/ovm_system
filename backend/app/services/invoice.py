@@ -4,7 +4,7 @@ from typing import List
 from app.models.invoice import Invoice, InvoiceLineItem, InvoiceStatus
 from app.models.vendor import VendorStatus
 from app.models.product import ProductStatus
-from app.schemas.invoice import InvoiceCreate, InvoiceStatusUpdate
+from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceStatusUpdate
 from app.services.base import BaseService
 from app.services.exceptions import (
     ResourceNotFoundException,
@@ -150,6 +150,34 @@ class InvoiceService(BaseService):
         """List invoices for the current tenant."""
         async with self.uow as uow:
             return await uow.invoices.get_multi(uow.session, skip=skip, limit=limit)
+
+    async def update_invoice(
+        self,
+        id: uuid.UUID,
+        data: InvoiceUpdate
+    ) -> Invoice:
+        """
+        Update mutable invoice fields (notes, due_date).
+        Permitted in DRAFT and ISSUED states to support Net-15/30/45/60 workflows.
+        Uses model_fields_set so omitted fields are never touched.
+        """
+        organization_id = get_tenant_id()
+        if not organization_id:
+            raise UnauthorizedException("Organization context missing")
+        async with self.uow as uow:
+            invoice = await uow.invoices.get_with_items(uow.session, organization_id, id)
+            if not invoice:
+                raise ResourceNotFoundException("Invoice", id)
+            if invoice.status not in {InvoiceStatus.DRAFT, InvoiceStatus.ISSUED}:
+                raise BusinessRuleViolationException(
+                    f"Invoice fields cannot be updated in {invoice.status.value} status"
+                )
+            if "due_date" in data.model_fields_set:
+                invoice.due_date = data.due_date
+            if "notes" in data.model_fields_set:
+                invoice.notes = data.notes
+            await uow.commit()
+            return await uow.invoices.get_with_items(uow.session, organization_id, invoice.id)
 
     async def update_invoice_status(
         self,

@@ -59,11 +59,11 @@ export interface Invoice {
   orderId: string
   orderNumber: string
   vendorName: string
-  amount: number
-  taxAmount: number
-  totalAmount: number
-  paidAmount: number
-  outstandingAmount: number
+  amount: string
+  taxAmount: string
+  totalAmount: string
+  paidAmount: string
+  outstandingAmount: string
   dueDate: string
   status: InvoiceStatus
   matchStatus: MatchStatus
@@ -76,7 +76,7 @@ export interface Payment {
   id: string
   payment_reference: string
   invoice_id: string
-  amount: number
+  amount: string
   payment_method: PaymentMethod
   payment_date: string
   status: PaymentStatus

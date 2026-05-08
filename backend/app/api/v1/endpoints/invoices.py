@@ -3,10 +3,11 @@ from typing import List
 from fastapi import APIRouter, Depends, Query, status
 from app.api import deps
 from app.schemas.invoice import (
-    InvoiceCreate, 
-    InvoiceResponse, 
+    InvoiceCreate,
+    InvoiceUpdate,
+    InvoiceResponse,
     InvoiceListResponse,
-    InvoiceStatusUpdate
+    InvoiceStatusUpdate,
 )
 from app.services.invoice import InvoiceService
 from app.services.uow import SQLAlchemyUnitOfWork
@@ -52,6 +53,19 @@ async def get_invoice(
 ):
     """Get a specific Invoice with line items."""
     return await service.get_invoice(id)
+
+@router.patch("/{id}", response_model=InvoiceResponse)
+async def update_invoice(
+    id: uuid.UUID,
+    data: InvoiceUpdate,
+    service: InvoiceService = Depends(get_invoice_service),
+):
+    """
+    Update mutable invoice fields (notes, due_date).
+    Supports Net-15/30/45/60 due-date workflows.
+    Permitted for DRAFT and ISSUED invoices only.
+    """
+    return await service.update_invoice(id, data)
 
 @router.patch("/{id}/status", response_model=InvoiceResponse)
 async def update_invoice_status(

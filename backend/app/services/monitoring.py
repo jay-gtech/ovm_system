@@ -9,7 +9,6 @@ from app.db.tenancy import apply_tenant_scope
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.payment import Payment, PaymentStatus
 from app.models.vendor_settlement import VendorSettlement, SettlementStatus
-from app.models.vendor import Vendor
 from app.schemas.monitoring import (
     OutstandingInvoiceResponse,
     PendingPaymentResponse,
@@ -43,7 +42,10 @@ class MonitoringService:
             Payment.is_deleted.is_(False)
         ).scalar_subquery()
 
-        query = select(Invoice).options(
+        query = select(
+            Invoice,
+            paid_subq.label("paid_amount")
+        ).options(
             selectinload(Invoice.vendor)
         ).where(Invoice.status.in_([InvoiceStatus.DRAFT, InvoiceStatus.ISSUED]))
         query = apply_tenant_scope(query, Invoice)
@@ -51,21 +53,22 @@ class MonitoringService:
             Invoice.is_deleted.is_(False),
             (Invoice.total_amount - paid_subq) > 0
         ).limit(limit).offset(offset)
-        
+
         result = await self.db.execute(query)
-        invoices = result.scalars().all()
-        
+        rows = result.all()
+
         response = []
-        for inv in invoices:
+        for inv, paid_amount in rows:
             aging_days, is_overdue = self._calculate_due_aging(inv.due_date)
-            
+            outstanding_amount = inv.total_amount - paid_amount
+
             response.append(OutstandingInvoiceResponse(
                 id=inv.id,
                 invoice_number=inv.invoice_number,
                 status=inv.status,
                 total_amount=inv.total_amount,
-                paid_amount=inv.paid_amount,
-                outstanding_amount=inv.outstanding_amount,
+                paid_amount=paid_amount,
+                outstanding_amount=outstanding_amount,
                 aging_days=aging_days,
                 is_overdue=is_overdue,
                 vendor=VendorLinkage(
