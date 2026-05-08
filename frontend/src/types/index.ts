@@ -125,6 +125,54 @@ export interface BackendAlertList {
   limit: number
 }
 
+export type NotificationStatus = 'PENDING' | 'SENT' | 'FAILED' | 'READ'
+export type NotificationChannel = 'IN_APP' | 'EMAIL'
+export type NotificationType =
+  | 'ALERT_ESCALATED'
+  | 'SLA_BREACHED'
+  | 'CRITICAL_EXPOSURE'
+  | 'UNRESOLVED_HIGH_RISK'
+
+export interface BackendNotification {
+  id: string
+  organization_id: string
+  user_id: string
+  notification_type: NotificationType
+  channel: NotificationChannel
+  title: string
+  message: string
+  status: NotificationStatus
+  related_entity_type?: string | null
+  related_entity_id?: string | null
+  sent_at?: string | null
+  read_at?: string | null
+  retry_count: number
+  created_at: string
+}
+
+export interface BackendNotificationList {
+  items: BackendNotification[]
+  total: number
+  skip: number
+  limit: number
+}
+
+export interface SLAPolicy {
+  id: string
+  organization_id: string
+  alert_type: AlertType
+  is_active: boolean
+  acknowledgement_minutes: number
+  resolution_minutes: number
+  escalation_level_1_minutes: number
+  escalation_level_2_minutes: number
+}
+
+export interface SLAPolicyList {
+  items: SLAPolicy[]
+  total: number
+}
+
 export interface GRN {
   id: string
   orderId: string
