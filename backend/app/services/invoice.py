@@ -5,6 +5,7 @@ from app.models.invoice import Invoice, InvoiceLineItem, InvoiceStatus
 from app.models.vendor import VendorStatus
 from app.models.product import ProductStatus
 from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceStatusUpdate
+from app.services.audit import AuditService
 from app.services.base import BaseService
 from app.services.exceptions import (
     ResourceNotFoundException,
@@ -27,7 +28,7 @@ _VALID_TRANSITIONS: dict[InvoiceStatus, set[InvoiceStatus]] = {
 class InvoiceService(BaseService):
     """
     Service layer for Invoice management.
-    Handles orchestration, financial rules, and tenant validation.
+    Handles orchestration, financial rules, tenant validation, and audit logging.
     """
 
     async def create_invoice(
@@ -125,8 +126,24 @@ class InvoiceService(BaseService):
             )
 
             uow.session.add(invoice)
+
+            # Audit: invoice.id is available immediately (Python UUID default)
+            await AuditService.log_event(
+                uow.session,
+                entity_type="invoice",
+                entity_id=invoice.id,
+                action="INVOICE_CREATED",
+                metadata={
+                    "invoice_number": invoice.invoice_number,
+                    "vendor_id": str(invoice.vendor_id),
+                    "total_amount": str(subtotal),
+                    "purchase_order_id": str(invoice.purchase_order_id) if invoice.purchase_order_id else None,
+                    "line_item_count": len(line_item_models),
+                },
+            )
+
             await uow.commit()
-            
+
             return await uow.invoices.get_with_items(
                 uow.session, organization_id, invoice.id
             )
@@ -160,6 +177,7 @@ class InvoiceService(BaseService):
         Update mutable invoice fields (notes, due_date).
         Permitted in DRAFT and ISSUED states to support Net-15/30/45/60 workflows.
         Uses model_fields_set so omitted fields are never touched.
+        Only logs field-level audit entries when the value actually changes.
         """
         organization_id = get_tenant_id()
         if not organization_id:
@@ -172,10 +190,37 @@ class InvoiceService(BaseService):
                 raise BusinessRuleViolationException(
                     f"Invoice fields cannot be updated in {invoice.status.value} status"
                 )
+
+            # Capture old values before mutation for accurate diff logging
+            old_due_date = invoice.due_date
+            old_notes = invoice.notes
+
             if "due_date" in data.model_fields_set:
                 invoice.due_date = data.due_date
+                if old_due_date != data.due_date:
+                    await AuditService.log_event(
+                        uow.session,
+                        entity_type="invoice",
+                        entity_id=invoice.id,
+                        action="INVOICE_UPDATED",
+                        field_name="due_date",
+                        old_value=str(old_due_date) if old_due_date else None,
+                        new_value=str(data.due_date) if data.due_date else None,
+                    )
+
             if "notes" in data.model_fields_set:
                 invoice.notes = data.notes
+                if old_notes != data.notes:
+                    await AuditService.log_event(
+                        uow.session,
+                        entity_type="invoice",
+                        entity_id=invoice.id,
+                        action="INVOICE_UPDATED",
+                        field_name="notes",
+                        old_value=old_notes,
+                        new_value=data.notes,
+                    )
+
             await uow.commit()
             return await uow.invoices.get_with_items(uow.session, organization_id, invoice.id)
 
@@ -200,7 +245,24 @@ class InvoiceService(BaseService):
                     f"{status_update.status.value} is not allowed"
                 )
 
+            old_status = invoice.status
             invoice.status = status_update.status
+
+            action = (
+                "INVOICE_CANCELLED"
+                if status_update.status == InvoiceStatus.CANCELLED
+                else "INVOICE_STATUS_CHANGED"
+            )
+            await AuditService.log_event(
+                uow.session,
+                entity_type="invoice",
+                entity_id=invoice.id,
+                action=action,
+                field_name="status",
+                old_value=old_status.value,
+                new_value=status_update.status.value,
+            )
+
             await uow.commit()
             return await uow.invoices.get_with_items(
                 uow.session, organization_id, invoice.id

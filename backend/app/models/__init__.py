@@ -2,7 +2,7 @@ from .organization import Organization
 from .user import User
 from .role import Role
 from .user_role import UserRole
-from .audit_log import AuditLog
+from .audit_log import AuditLog, AuditAction
 from .vendor import Vendor, VendorStatus
 from .product import Product, ProductStatus
 from .purchase_order import PurchaseOrder, POLineItem, PurchaseOrderStatus
@@ -16,6 +16,7 @@ __all__ = [
     "Role",
     "UserRole",
     "AuditLog",
+    "AuditAction",
     "Vendor",
     "VendorStatus",
     "Product",

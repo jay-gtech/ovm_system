@@ -1,14 +1,19 @@
 import uuid
-from typing import List, Sequence, Tuple
+from typing import Sequence, Tuple
 from sqlalchemy.exc import IntegrityError
 from app.services.base import BaseService
-from app.models.vendor import Vendor, VendorStatus
+from app.services.audit import AuditService
+from app.models.vendor import Vendor
 from app.schemas.vendor import VendorCreate, VendorUpdate, VendorStatusUpdate
 from app.services.exceptions import (
     ConflictDomainError,
     NotFoundDomainError,
-    ValidationDomainError
 )
+
+# Fields whose changes carry financial/operational significance and must be audited.
+# Excludes cosmetic fields (display_name, notes) per spec requirements.
+_SENSITIVE_VENDOR_FIELDS = frozenset({"legal_name", "tax_id", "email", "phone", "address"})
+
 
 class VendorService(BaseService):
     """
@@ -39,27 +44,29 @@ class VendorService(BaseService):
                     obj_in=vendor_data
                 )
 
-                await self.record_audit(
-                    action="CREATE",
-                    resource_type="vendor",
-                    resource_id=str(vendor.id),
-                    payload=vendor_data
+                await AuditService.log_event(
+                    self.uow.session,
+                    entity_type="vendor",
+                    entity_id=vendor.id,
+                    action="VENDOR_CREATED",
+                    metadata={
+                        "vendor_code": vendor.vendor_code,
+                        "legal_name": vendor.legal_name,
+                        "status": vendor.status.value,
+                    },
                 )
 
                 await self.uow.commit()
             except IntegrityError:
                 # FIX-1: Race condition — two concurrent creates both passed the pre-check.
-                # The DB unique constraint fired. Surface as a domain conflict —
-                # never let raw DB exceptions reach the API layer.
+                # The DB unique constraint fired. Surface as a domain conflict.
                 raise ConflictDomainError(
                     f"Vendor with code '{obj_in.vendor_code}' already exists."
                 )
             return vendor
 
     async def get_vendor(self, vendor_id: uuid.UUID) -> Vendor:
-        """
-        Fetch a vendor by ID. Enforces tenant isolation.
-        """
+        """Fetch a vendor by ID. Enforces tenant isolation."""
         async with self.uow:
             vendor = await self.uow.vendors.get(self.uow.session, id=vendor_id)
             if not vendor:
@@ -81,18 +88,18 @@ class VendorService(BaseService):
                 skip=skip,
                 limit=limit
             )
-            # FIX-3: Use DB-level count for accurate total, not len(page)
             total = await self.uow.vendors.count(self.uow.session)
             return items, total
 
     async def update_vendor(
-        self, 
-        vendor_id: uuid.UUID, 
+        self,
+        vendor_id: uuid.UUID,
         obj_in: VendorUpdate
     ) -> Vendor:
         """
         Update vendor details.
         Rule: vendor_code is immutable.
+        Audits only sensitive operational fields; cosmetic fields (display_name, notes) are silent.
         """
         async with self.uow:
             vendor = await self.uow.vendors.get(self.uow.session, id=vendor_id)
@@ -102,9 +109,24 @@ class VendorService(BaseService):
             update_data = obj_in.model_dump(exclude_unset=True)
             # FIX-2: Immutability enforcement — financial identifiers must never be mutated.
             update_data.pop("vendor_code", None)
-            # FIX-2: Status changes MUST go through update_status() to guarantee
-            # the STATUS_UPDATE audit event is always emitted.
+            # FIX-2: Status changes MUST go through update_status().
             update_data.pop("status", None)
+
+            # Emit one audit entry per sensitive field that actually changes value
+            for field in _SENSITIVE_VENDOR_FIELDS:
+                if field in update_data:
+                    old_val = getattr(vendor, field, None)
+                    new_val = update_data[field]
+                    if old_val != new_val:
+                        await AuditService.log_event(
+                            self.uow.session,
+                            entity_type="vendor",
+                            entity_id=vendor.id,
+                            action="VENDOR_UPDATED",
+                            field_name=field,
+                            old_value=str(old_val) if old_val is not None else None,
+                            new_value=str(new_val) if new_val is not None else None,
+                        )
 
             updated_vendor = await self.uow.vendors.update(
                 self.uow.session,
@@ -112,30 +134,20 @@ class VendorService(BaseService):
                 obj_in=update_data
             )
 
-            await self.record_audit(
-                action="UPDATE",
-                resource_type="vendor",
-                resource_id=str(vendor_id),
-                payload=update_data
-            )
-
             await self.uow.commit()
             return updated_vendor
 
     async def update_status(
-        self, 
-        vendor_id: uuid.UUID, 
+        self,
+        vendor_id: uuid.UUID,
         obj_in: VendorStatusUpdate
     ) -> Vendor:
-        """
-        Update vendor status (lifecycle management).
-        """
+        """Update vendor status (lifecycle management)."""
         async with self.uow:
             vendor = await self.uow.vendors.get(self.uow.session, id=vendor_id)
             if not vendor:
                 raise NotFoundDomainError(f"Vendor with ID {vendor_id} not found.")
 
-            # FIX-4: Capture previous state before mutation for forensic audit trail
             previous_status = vendor.status.value if vendor.status else None
 
             updated_vendor = await self.uow.vendors.update(
@@ -144,15 +156,14 @@ class VendorService(BaseService):
                 obj_in={"status": obj_in.status}
             )
 
-            await self.record_audit(
-                action="STATUS_UPDATE",
-                resource_type="vendor",
-                resource_id=str(vendor_id),
-                payload={
-                    "previous_status": previous_status,
-                    # FIX-4: .value ensures clean string serialization, not enum repr
-                    "status": obj_in.status.value
-                }
+            await AuditService.log_event(
+                self.uow.session,
+                entity_type="vendor",
+                entity_id=vendor.id,
+                action="VENDOR_STATUS_CHANGED",
+                field_name="status",
+                old_value=previous_status,
+                new_value=obj_in.status.value,
             )
 
             await self.uow.commit()

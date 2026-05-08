@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Calendar, FileText, User, Hash } from 'lucide-react'
+import { ArrowLeft, Plus, Calendar, FileText, User, Hash, ClipboardList } from 'lucide-react'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { AuditTimeline } from '../../components/ui/AuditTimeline'
 import { formatINR, formatDate } from '../../utils/format'
 import { useInvoice } from '../../hooks/useInvoices'
 import { usePayments } from '../../hooks/usePayments'
@@ -102,9 +103,9 @@ export default function InvoiceDetailPage() {
                 Payment History
               </h3>
               {!showPaymentForm && invoice.status !== 'PAID' && (
-                <Button 
-                  size="sm" 
-                  className="gap-2 h-8" 
+                <Button
+                  size="sm"
+                  className="gap-2 h-8"
                   onClick={() => setShowPaymentForm(true)}
                 >
                   <Plus size={14} /> Record Payment
@@ -115,18 +116,30 @@ export default function InvoiceDetailPage() {
               {showPaymentForm ? (
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
                   <h4 className="text-sm font-bold text-slate-800 mb-4">Record New Payment</h4>
-                  <PaymentForm 
-                    invoiceId={invoice.id} 
+                  <PaymentForm
+                    invoiceId={invoice.id}
                     onSuccess={() => setShowPaymentForm(false)}
                     onCancel={() => setShowPaymentForm(false)}
                   />
                 </div>
               ) : (
-                <PaymentTable 
-                  payments={paymentsData?.items || []} 
-                  isLoading={isLoadingPayments} 
+                <PaymentTable
+                  payments={paymentsData?.items || []}
+                  isLoading={isLoadingPayments}
                 />
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <div className="border-b border-slate-100 px-5 py-4">
+              <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <ClipboardList size={16} className="text-slate-400" />
+                Audit Trail
+              </h3>
+            </div>
+            <CardContent className="px-5 py-4">
+              <AuditTimeline entityType="invoice" entityId={invoice.id} />
             </CardContent>
           </Card>
         </div>

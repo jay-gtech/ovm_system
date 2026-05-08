@@ -1,16 +1,25 @@
 import uuid
 from decimal import Decimal
-from typing import List, Optional, Sequence, Tuple
+from typing import Sequence, Tuple
 from datetime import datetime, timezone
 from app.services.base import BaseService
+from app.services.audit import AuditService
 from app.models.payment import Payment, PaymentStatus
 from app.models.invoice import InvoiceStatus
-from app.schemas.payment import PaymentCreate, PaymentUpdate
+from app.schemas.payment import PaymentCreate
 from app.services.uow import BaseUnitOfWork
 from app.services.exceptions import (
     NotFoundDomainError,
     ValidationDomainError,
 )
+
+# Maps terminal payment status values to their canonical audit action names
+_PAYMENT_STATUS_ACTIONS = {
+    PaymentStatus.RECEIVED: "PAYMENT_RECEIVED",
+    PaymentStatus.FAILED: "PAYMENT_FAILED",
+    PaymentStatus.CANCELLED: "PAYMENT_CANCELLED",
+}
+
 
 class PaymentService(BaseService):
     def __init__(self, uow: BaseUnitOfWork):
@@ -42,15 +51,27 @@ class PaymentService(BaseService):
 
             payment_data = obj_in.model_dump()
             # SEC-3: Status is always server-assigned to PENDING at creation.
-            # Advancement to RECEIVED must happen via update_status() only.
             payment_data["status"] = PaymentStatus.PENDING
             if not payment_data.get("payment_date"):
                 payment_data["payment_date"] = datetime.now(timezone.utc)
 
-            # 3. Create Payment
+            # 3. Create Payment (repository flush makes payment.id available)
             payment = await self.uow.payments.create(
                 self.uow.session,
                 obj_in=payment_data
+            )
+
+            await AuditService.log_event(
+                self.uow.session,
+                entity_type="payment",
+                entity_id=payment.id,
+                action="PAYMENT_CREATED",
+                metadata={
+                    "invoice_id": str(payment.invoice_id),
+                    "amount": str(payment.amount),
+                    "payment_method": payment.payment_method.value,
+                    "payment_reference": payment.payment_reference,
+                },
             )
 
             await self.uow.commit()
@@ -101,8 +122,6 @@ class PaymentService(BaseService):
                     )
 
             # WF-1: Reversing a RECEIVED payment must roll back invoice PAID status.
-            # The payment update hasn't happened yet, so current_received still includes
-            # this payment. Subtract it to compute the post-reversal balance.
             elif old_status == PaymentStatus.RECEIVED and status in (
                 PaymentStatus.FAILED, PaymentStatus.CANCELLED
             ):
@@ -124,6 +143,17 @@ class PaymentService(BaseService):
                 obj_in={"status": status}
             )
 
+            action = _PAYMENT_STATUS_ACTIONS.get(status, "PAYMENT_STATUS_CHANGED")
+            await AuditService.log_event(
+                self.uow.session,
+                entity_type="payment",
+                entity_id=payment.id,
+                action=action,
+                field_name="status",
+                old_value=old_status.value,
+                new_value=status.value,
+            )
+
             await self.uow.commit()
             return payment
 
@@ -139,7 +169,6 @@ class PaymentService(BaseService):
             if not invoice:
                 raise NotFoundDomainError(f"Invoice {invoice_id} not found.")
 
-            # FI-1: get_received_sum_by_invoice now returns Decimal directly
             paid_amount = await self.uow.payments.get_received_sum_by_invoice(
                 self.uow.session, invoice_id
             )
@@ -168,10 +197,7 @@ class PaymentService(BaseService):
     async def get_multi(
         self, skip: int = 0, limit: int = 100
     ) -> Sequence[Payment]:
-        """
-        List payments for the current tenant with pagination.
-        AS-1: explicit method required since BaseService does not store a repository.
-        """
+        """List payments for the current tenant with pagination."""
         async with self.uow:
             return await self.uow.payments.get_multi(
                 self.uow.session, skip=skip, limit=limit

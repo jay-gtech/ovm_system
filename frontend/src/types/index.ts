@@ -123,3 +123,26 @@ export interface AgingBucket {
   count: number
   color: string
 }
+
+export interface AuditLog {
+  id: string
+  organization_id: string
+  entity_type: string
+  entity_id: string
+  action: string
+  field_name?: string
+  old_value?: string
+  new_value?: string
+  actor_user_id?: string
+  actor_role?: string
+  reason?: string
+  metadata_json?: Record<string, unknown>
+  created_at: string
+}
+
+export interface AuditLogList {
+  items: AuditLog[]
+  total: number
+  skip: number
+  limit: number
+}
