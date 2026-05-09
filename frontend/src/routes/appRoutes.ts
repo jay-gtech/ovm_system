@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, ShoppingCart, Users, Package,
-  FileText, CreditCard, BarChart3, Settings, Bell, ClipboardList, Tag, Activity, BellRing
+  FileText, CreditCard, BarChart3, Settings, Bell, ClipboardList, Tag, Activity, BellRing,
+  BarChart2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -22,6 +23,7 @@ export const appRoutes: AppRoute[] = [
   { path: '/reconcile', label: 'Reconcile', icon: ClipboardList, badge: '2' },
   { path: '/alerts',    label: 'Alerts',    icon: Bell,          badge: '4' },
   { path: '/notifications', label: 'Notifications', icon: BellRing },
+  { path: '/risk-intelligence', label: 'Risk Intelligence', icon: BarChart2 },
   { path: '/monitoring',label: 'Monitoring',icon: Activity },
   { path: '/reports',   label: 'Reports',   icon: BarChart3 },
   { path: '/settings',  label: 'Settings',  icon: Settings },

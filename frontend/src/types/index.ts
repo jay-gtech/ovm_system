@@ -225,3 +225,40 @@ export interface AuditLogList {
   skip: number
   limit: number
 }
+
+// ---------------------------------------------------------------------------
+// Risk Intelligence
+// ---------------------------------------------------------------------------
+
+export type RiskLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+export type RiskEntityType = 'invoice' | 'vendor' | 'payment'
+
+export interface RiskAssessment {
+  id: string
+  organization_id: string
+  entity_type: RiskEntityType
+  entity_id: string
+  risk_score: number
+  risk_level: RiskLevel
+  contributing_factors: Record<string, unknown>
+  explanation_text: string
+  generated_at: string
+  source_snapshot_json?: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RiskAssessmentList {
+  items: RiskAssessment[]
+  total: number
+  skip: number
+  limit: number
+}
+
+export interface RiskSummary {
+  critical_count: number
+  high_count: number
+  medium_count: number
+  low_count: number
+  total_assessed_entities: number
+}
