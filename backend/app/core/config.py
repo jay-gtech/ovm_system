@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "production"
     DEBUG: bool = False
     
+    # Uploads
+    MAX_UPLOAD_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB
+
     # CORS
     ALLOWED_ORIGINS: List[AnyHttpUrl] = []
 

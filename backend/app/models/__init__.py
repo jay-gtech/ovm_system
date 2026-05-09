@@ -12,6 +12,7 @@ from .vendor_settlement import VendorSettlement, SettlementStatus
 from .alert import Alert, AlertStatus, AlertSeverity, AlertType
 from .sla_policy import SLAPolicy
 from .notification import Notification, NotificationChannel, NotificationStatus, NotificationType
+from .document import Document, DocumentVersion, DocumentExtraction, DocumentType, DocumentProcessingStatus, DocumentValidationStatus, DocumentHumanReviewStatus
 
 __all__ = [
     "Organization",
@@ -43,4 +44,11 @@ __all__ = [
     "NotificationChannel",
     "NotificationStatus",
     "NotificationType",
+    "Document",
+    "DocumentVersion",
+    "DocumentExtraction",
+    "DocumentType",
+    "DocumentProcessingStatus",
+    "DocumentValidationStatus",
+    "DocumentHumanReviewStatus"
 ]

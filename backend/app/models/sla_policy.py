@@ -20,6 +20,7 @@ class SLAPolicy(TenantBaseModel):
         Level 1       → Level 2 (escalation_level_2_minutes elapsed, still active)
         Any level     → sla_breached_at stamped once resolution_minutes elapsed
     """
+    __tablename__ = "sla_policy"
 
     __table_args__ = (
         UniqueConstraint(

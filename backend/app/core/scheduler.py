@@ -27,6 +27,36 @@ def setup_scheduler() -> None:
         scan_high_exposure,
     )
     from app.jobs.sla_scanner import scan_sla_evaluations
+    from app.jobs.risk_scanner import (
+        scan_invoice_risk,
+        scan_vendor_risk,
+        scan_settlement_risk,
+    )
+
+    scheduler.add_job(
+        scan_invoice_risk,
+        trigger="interval",
+        hours=6,
+        id="invoice_risk_scan",
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    scheduler.add_job(
+        scan_vendor_risk,
+        trigger="interval",
+        hours=12,
+        id="vendor_risk_scan",
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    scheduler.add_job(
+        scan_settlement_risk,
+        trigger="interval",
+        hours=12,
+        id="settlement_risk_scan",
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
 
     scheduler.add_job(
         scan_overdue_invoices,

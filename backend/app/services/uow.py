@@ -13,6 +13,7 @@ from app.repositories.audit import AuditRepository
 from app.repositories.alert import AlertRepository
 from app.repositories.sla_policy import SLAPolicyRepository
 from app.repositories.notification import NotificationRepository
+from app.repositories.document import DocumentRepository
 
 
 class BaseUnitOfWork(ABC):
@@ -41,6 +42,7 @@ class BaseUnitOfWork(ABC):
     alerts: AlertRepository
     sla_policies: SLAPolicyRepository
     notifications: NotificationRepository
+    documents: DocumentRepository
 
     async def __aenter__(self):
         return self
