@@ -5,10 +5,11 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
 from app.core.config import settings
-from app.middleware.correlation import CorrelationIdMiddleware
+from app.core.logging import setup_logging
+from app.middleware.tracing import RequestTracingMiddleware
 from app.middleware.tenant import TenantContextMiddleware
 
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -18,25 +19,11 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# Middleware stack — Starlette builds in LIFO (reverse-add) order, so the
-# LAST middleware added becomes the OUTERMOST layer (runs first on requests).
-#
-# Add order (innermost → outermost):
-#   1. TenantContextMiddleware   — extracts tenant/user from JWT
-#   2. CorrelationIdMiddleware   — assigns X-Request-ID to ContextVar
-#   3. CORSMiddleware            — outermost: intercepts OPTIONS pre-flight
-#                                  before any BaseHTTPMiddleware runs
-#
-# Execution order (request → route handler):
-#   CORSMiddleware → CorrelationIdMiddleware → TenantContextMiddleware → router
+# Middleware stack
 # ---------------------------------------------------------------------------
 
-# TenantContextMiddleware is innermost: added first so it runs last before routes.
 app.add_middleware(TenantContextMiddleware)
-
-# CorrelationIdMiddleware wraps TenantContext so every request carries a
-# traceable request_id when tenant extraction runs.
-app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(RequestTracingMiddleware)
 
 # CORSMiddleware is outermost: added last so it runs first on every request.
 # This guarantees OPTIONS pre-flight responses are returned immediately —

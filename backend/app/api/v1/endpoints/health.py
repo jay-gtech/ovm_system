@@ -25,9 +25,29 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         redis_status = f"error: {str(e)}"
 
+    # Scheduler Check
+    scheduler_status = "disabled"
+    active_jobs = 0
+    if settings.ENABLE_SCHEDULER:
+        from app.core.scheduler import scheduler
+        scheduler_status = "running" if scheduler.running else "stopped"
+        active_jobs = len(scheduler.get_jobs()) if scheduler.running else 0
+
     return {
         "status": "active",
         "database": db_status,
         "redis": redis_status,
-        "version": settings.VERSION
+        "version": settings.VERSION,
+        "scheduler": {
+            "status": scheduler_status,
+            "active_jobs": active_jobs,
+        },
+        "ocr": {
+            "status": "ok" if settings.OCR_SERVICE_URL else "mocked",
+        },
+        "storage": {
+            "status": "ok" if settings.S3_BUCKET else "local",
+        },
+        "queue_backlog": 0, # Placeholder for fast return
+        "migration_status": "ok", # Can be extended to query alembic_version
     }

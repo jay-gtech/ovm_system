@@ -25,6 +25,7 @@ export const appRoutes: AppRoute[] = [
   { path: '/notifications', label: 'Notifications', icon: BellRing },
   { path: '/risk-intelligence', label: 'Risk Intelligence', icon: BarChart2 },
   { path: '/monitoring',label: 'Monitoring',icon: Activity },
+  { path: '/ops',       label: 'Operations', icon: Activity },
   { path: '/reports',   label: 'Reports',   icon: BarChart3 },
   { path: '/settings',  label: 'Settings',  icon: Settings },
 ]

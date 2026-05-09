@@ -55,6 +55,7 @@ export function AppRoutes() {
         <Route path="/notifications"     element={<Suspense fallback={<PageLoader/>}><Notifications/></Suspense>} />
         <Route path="/risk-intelligence" element={<Suspense fallback={<PageLoader/>}><RiskIntelligence/></Suspense>} />
         <Route path="/monitoring"        element={<Suspense fallback={<PageLoader/>}><Monitoring/></Suspense>} />
+        <Route path="/ops"               element={<Suspense fallback={<PageLoader/>}><Operations/></Suspense>} />
         <Route path="/reports"   element={<Suspense fallback={<PageLoader/>}><Reports/></Suspense>} />
         <Route path="/settings"  element={<Suspense fallback={<PageLoader/>}><Settings/></Suspense>} />
         <Route path="*"          element={<Navigate to="/" replace />} />

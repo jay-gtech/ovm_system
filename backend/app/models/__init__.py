@@ -13,6 +13,7 @@ from .alert import Alert, AlertStatus, AlertSeverity, AlertType
 from .sla_policy import SLAPolicy
 from .notification import Notification, NotificationChannel, NotificationStatus, NotificationType
 from .document import Document, DocumentVersion, DocumentExtraction, DocumentType, DocumentProcessingStatus, DocumentValidationStatus, DocumentHumanReviewStatus
+from .operational_error import OperationalError
 
 __all__ = [
     "Organization",
@@ -50,5 +51,6 @@ __all__ = [
     "DocumentType",
     "DocumentProcessingStatus",
     "DocumentValidationStatus",
-    "DocumentHumanReviewStatus"
+    "DocumentHumanReviewStatus",
+    "OperationalError"
 ]
