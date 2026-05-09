@@ -11,7 +11,6 @@ from app.models.purchase_order import PurchaseOrder
 from app.models.vendor import Vendor
 from app.models.alert import AlertType, AlertSeverity
 from app.repositories.document import document_repo
-from app.repositories.alert import alert_repo
 from app.db.session import SessionLocal
 from app.core.context import set_tenant_id
 from app.db.tenancy import apply_tenant_scope
@@ -104,7 +103,10 @@ class ValidationEngine:
 
         return mismatches
 
-async def create_validation_alert(db: AsyncSession, document: Document, message: str):
+from app.services.uow import SQLAlchemyUnitOfWork
+from app.services.audit import AuditService
+
+async def create_validation_alert(uow: SQLAlchemyUnitOfWork, document: Document, message: str):
     """Integrates with Mismatch Alert engine."""
     alert_in = {
         "alert_type": AlertType.RISK,
@@ -115,10 +117,7 @@ async def create_validation_alert(db: AsyncSession, document: Document, message:
             "document_type": document.document_type
         }
     }
-    await alert_repo.create(db, obj_in=alert_in)
-
-from app.services.uow import SQLAlchemyUnitOfWork
-from app.services.audit import AuditService
+    await uow.alerts.create(uow.session, obj_in=alert_in)
 
 async def process_document_validation(tenant_id: UUID, document_id: UUID):
     async with SQLAlchemyUnitOfWork() as uow:
@@ -158,7 +157,7 @@ async def process_document_validation(tenant_id: UUID, document_id: UUID):
             if mismatches:
                 # Create alerts for mismatches
                 for m in mismatches:
-                    await create_validation_alert(uow.session, document, m)
+                    await create_validation_alert(uow, document, m)
                 await uow.documents.update(uow.session, db_obj=document, obj_in={"validation_status": DocumentValidationStatus.FAILED})
             else:
                 await uow.documents.update(uow.session, db_obj=document, obj_in={"validation_status": DocumentValidationStatus.PASSED})
