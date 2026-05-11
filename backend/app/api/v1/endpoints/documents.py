@@ -3,13 +3,15 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_current_active_user
+from app.api.deps import get_db, get_current_active_user, get_uow
 from app.models.user import User
-from app.models.document import DocumentType, DocumentHumanReviewStatus
+from app.models.document import DocumentType, DocumentHumanReviewStatus, DocumentProcessingStatus, DocumentValidationStatus
 from app.schemas.document import DocumentResponse, DocumentExtractionResponse
 from app.services.document import document_service
 from app.repositories.document import document_repo
 from app.core.context import require_tenant_id
+from app.services.uow import SQLAlchemyUnitOfWork
+from app.services.audit import AuditService
 
 # Import processing tasks
 from app.services.ocr import process_document_ocr
@@ -124,20 +126,17 @@ async def get_document_validation(
         "processing_status": document.processing_status
     }
 
-from app.services.audit import AuditService
-
 @router.post("/{document_id}/review/approve", response_model=DocumentResponse)
 async def approve_document(
     document_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    uow: SQLAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
     """
     Human review: Approve document extraction/validation.
     Requires document to be fully VALIDATED and pending review.
     """
-    from app.models.document import DocumentProcessingStatus, DocumentValidationStatus
-    document = await document_repo.get_with_relations(db, document_id)
+    document = await uow.documents.get_with_relations(uow.session, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -156,10 +155,12 @@ async def approve_document(
         )
 
     old_status = document.human_review_status
-    await document_repo.update(db, db_obj=document, obj_in={"human_review_status": DocumentHumanReviewStatus.APPROVED})
+    
+    # --- Transactional Boundary: Approve document and log audit event ---
+    await uow.documents.update(uow.session, db_obj=document, obj_in={"human_review_status": DocumentHumanReviewStatus.APPROVED})
 
     await AuditService.log_event(
-        session=db,
+        session=uow.session,
         entity_type="DOCUMENT",
         entity_id=document.id,
         action="REVIEW_APPROVED",
@@ -168,19 +169,21 @@ async def approve_document(
         old_value=old_status,
         new_value=DocumentHumanReviewStatus.APPROVED
     )
+    
+    await uow.commit()
     return document
 
 @router.post("/{document_id}/review/reject", response_model=DocumentResponse)
 async def reject_document(
     document_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    uow: SQLAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
     """
     Human review: Reject document extraction/validation.
     Requires document review to be in PENDING state.
     """
-    document = await document_repo.get_with_relations(db, document_id)
+    document = await uow.documents.get_with_relations(uow.session, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -194,10 +197,12 @@ async def reject_document(
         )
 
     old_status = document.human_review_status
-    await document_repo.update(db, db_obj=document, obj_in={"human_review_status": DocumentHumanReviewStatus.REJECTED})
+    
+    # --- Transactional Boundary: Reject document and log audit event ---
+    await uow.documents.update(uow.session, db_obj=document, obj_in={"human_review_status": DocumentHumanReviewStatus.REJECTED})
 
     await AuditService.log_event(
-        session=db,
+        session=uow.session,
         entity_type="DOCUMENT",
         entity_id=document.id,
         action="REVIEW_REJECTED",
@@ -206,4 +211,6 @@ async def reject_document(
         old_value=old_status,
         new_value=DocumentHumanReviewStatus.REJECTED
     )
+    
+    await uow.commit()
     return document

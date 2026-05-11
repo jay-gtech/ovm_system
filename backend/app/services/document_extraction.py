@@ -100,10 +100,8 @@ async def process_document_extraction(tenant_id: UUID, document_id: UUID):
             return
             
         try:
-            # Get latest extraction record with OCR text — ordered by creation time, not list position
-            extraction = None
-            if document.extractions:
-                extraction = max(document.extractions, key=lambda e: e.created_at)
+            # Get latest extraction record with OCR text
+            extraction = await uow.document_extractions.get_latest_for_document(uow.session, document_id)
             
             if not extraction or not extraction.raw_ocr_text:
                 raise ValueError("No OCR text available for extraction")
@@ -116,17 +114,20 @@ async def process_document_extraction(tenant_id: UUID, document_id: UUID):
                 extracted_data, confidence = ExtractionEngine.extract_invoice(text)
             elif document.document_type == DocumentType.PURCHASE_ORDER:
                 extracted_data, confidence = ExtractionEngine.extract_purchase_order(text)
-            else:
-                # Basic default extraction
-                pass
-                
-            extraction.extracted_fields_json = extracted_data
-            extraction.confidence_scores_json = confidence
-            extraction.extraction_status = ExtractionStatus.SUCCESS
+            
+            # --- Transactional Boundary: Atomic update of extraction results and document status ---
+            await uow.document_extractions.update(
+                uow.session, 
+                db_obj=extraction, 
+                obj_in={
+                    "extracted_fields_json": extracted_data,
+                    "confidence_scores_json": confidence,
+                    "extraction_status": ExtractionStatus.SUCCESS
+                }
+            )
             
             old_status = document.processing_status
             await uow.documents.update(uow.session, db_obj=document, obj_in={"processing_status": DocumentProcessingStatus.EXTRACTION_COMPLETE})
-            uow.session.add(extraction)
             
             await AuditService.log_event(
                 session=uow.session,
@@ -138,24 +139,31 @@ async def process_document_extraction(tenant_id: UUID, document_id: UUID):
                 new_value=DocumentProcessingStatus.EXTRACTION_COMPLETE,
                 metadata={"extracted_fields": extracted_data}
             )
+            # Explicit commit: ensures extraction data and status change are atomic
             await uow.commit()
             
             logger.info(f"Extraction complete for document {document_id}")
             
         except Exception as e:
+            # --- Transactional Boundary: Rollback occurs automatically via __aexit__ on exception ---
             logger.error(f"Failed Extraction for document {document_id}: {e}")
             old_status = document.processing_status
-            await uow.documents.update(uow.session, db_obj=document, obj_in={"processing_status": DocumentProcessingStatus.FAILED})
             
-            await AuditService.log_event(
-                session=uow.session,
-                entity_type="DOCUMENT",
-                entity_id=document.id,
-                action="EXTRACTION_FAILED",
-                field_name="processing_status",
-                old_value=old_status,
-                new_value=DocumentProcessingStatus.FAILED,
-                reason=str(e)
-            )
-            await uow.commit()
+            # Start a new transaction for error state logging
+            async with SQLAlchemyUnitOfWork() as error_uow:
+                doc = await error_uow.documents.get(error_uow.session, document_id)
+                if doc:
+                    await error_uow.documents.update(error_uow.session, db_obj=doc, obj_in={"processing_status": DocumentProcessingStatus.FAILED})
+                    
+                    await AuditService.log_event(
+                        session=error_uow.session,
+                        entity_type="DOCUMENT",
+                        entity_id=doc.id,
+                        action="EXTRACTION_FAILED",
+                        field_name="processing_status",
+                        old_value=old_status,
+                        new_value=DocumentProcessingStatus.FAILED,
+                        reason=str(e)
+                    )
+                    await error_uow.commit()
 

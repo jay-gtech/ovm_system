@@ -13,7 +13,8 @@ from app.repositories.audit import AuditRepository
 from app.repositories.alert import AlertRepository
 from app.repositories.sla_policy import SLAPolicyRepository
 from app.repositories.notification import NotificationRepository
-from app.repositories.document import DocumentRepository
+from app.repositories.document import DocumentRepository, DocumentExtractionRepository, DocumentValidationRepository
+from app.repositories.risk_assessment import RiskAssessmentRepository
 
 
 class BaseUnitOfWork(ABC):
@@ -43,6 +44,9 @@ class BaseUnitOfWork(ABC):
     sla_policies: SLAPolicyRepository
     notifications: NotificationRepository
     documents: DocumentRepository
+    document_extractions: DocumentExtractionRepository
+    document_validations: DocumentValidationRepository
+    risk_assessments: RiskAssessmentRepository
 
     async def __aenter__(self):
         return self
@@ -101,6 +105,10 @@ class SQLAlchemyUnitOfWork(BaseUnitOfWork):
         self.alerts = AlertRepository()
         self.sla_policies = SLAPolicyRepository()
         self.notifications = NotificationRepository()
+        self.documents = DocumentRepository()
+        self.document_extractions = DocumentExtractionRepository()
+        self.document_validations = DocumentValidationRepository()
+        self.risk_assessments = RiskAssessmentRepository()
 
     async def __aenter__(self):
         if self.session is None:

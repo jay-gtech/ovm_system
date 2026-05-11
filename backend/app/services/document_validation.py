@@ -156,7 +156,13 @@ async def process_document_validation(tenant_id: UUID, document_id: UUID):
         extraction = document.extractions[-1] if document.extractions else None
         if not extraction or not extraction.extracted_fields_json:
             old_val_status = document.validation_status
-            await uow.documents.update(uow.session, db_obj=document, obj_in={"validation_status": DocumentValidationStatus.FAILED})
+            
+            # --- Transactional Boundary: Set FAILED status if no extraction found ---
+            await uow.document_validations.update_validation_status(
+                uow.session, 
+                document=document, 
+                status=DocumentValidationStatus.FAILED
+            )
             
             await AuditService.log_event(
                 session=uow.session,
@@ -168,6 +174,7 @@ async def process_document_validation(tenant_id: UUID, document_id: UUID):
                 new_value=DocumentValidationStatus.FAILED,
                 reason="No extracted fields available"
             )
+            # Explicit commit
             await uow.commit()
             return
 
@@ -180,17 +187,26 @@ async def process_document_validation(tenant_id: UUID, document_id: UUID):
             
             old_val_status = document.validation_status
             
+            # --- Transactional Boundary: Atomic update of validation results and status ---
             if mismatches:
                 # Create alerts for mismatches
                 for m in mismatches:
                     await create_validation_alert(uow, document, m)
-                await uow.documents.update(uow.session, db_obj=document, obj_in={"validation_status": DocumentValidationStatus.FAILED})
+                
+                await uow.document_validations.update_validation_status(
+                    uow.session,
+                    document=document,
+                    status=DocumentValidationStatus.FAILED,
+                    processing_status=DocumentProcessingStatus.VALIDATED
+                )
             else:
-                await uow.documents.update(uow.session, db_obj=document, obj_in={"validation_status": DocumentValidationStatus.PASSED})
+                await uow.document_validations.update_validation_status(
+                    uow.session,
+                    document=document,
+                    status=DocumentValidationStatus.PASSED,
+                    processing_status=DocumentProcessingStatus.VALIDATED
+                )
 
-            old_proc_status = document.processing_status
-            await uow.documents.update(uow.session, db_obj=document, obj_in={"processing_status": DocumentProcessingStatus.VALIDATED})
-            
             await AuditService.log_event(
                 session=uow.session,
                 entity_type="DOCUMENT",
@@ -201,24 +217,31 @@ async def process_document_validation(tenant_id: UUID, document_id: UUID):
                 new_value=document.validation_status,
                 metadata={"mismatches": mismatches}
             )
+            # Explicit commit: ensures all alerts and status changes are atomic
             await uow.commit()
             
             logger.info(f"Validation complete for document {document_id}")
             
         except Exception as e:
+            # --- Transactional Boundary: Rollback occurs automatically via __aexit__ on exception ---
             logger.error(f"Failed Validation for document {document_id}: {e}")
             old_proc_status = document.processing_status
-            await uow.documents.update(uow.session, db_obj=document, obj_in={"processing_status": DocumentProcessingStatus.FAILED})
             
-            await AuditService.log_event(
-                session=uow.session,
-                entity_type="DOCUMENT",
-                entity_id=document.id,
-                action="VALIDATION_ERROR",
-                field_name="processing_status",
-                old_value=old_proc_status,
-                new_value=DocumentProcessingStatus.FAILED,
-                reason=str(e)
-            )
-            await uow.commit()
+            # Start a new transaction for error state logging
+            async with SQLAlchemyUnitOfWork() as error_uow:
+                doc = await error_uow.documents.get(error_uow.session, document_id)
+                if doc:
+                    await error_uow.documents.update(error_uow.session, db_obj=doc, obj_in={"processing_status": DocumentProcessingStatus.FAILED})
+                    
+                    await AuditService.log_event(
+                        session=error_uow.session,
+                        entity_type="DOCUMENT",
+                        entity_id=doc.id,
+                        action="VALIDATION_ERROR",
+                        field_name="processing_status",
+                        old_value=old_proc_status,
+                        new_value=DocumentProcessingStatus.FAILED,
+                        reason=str(e)
+                    )
+                    await error_uow.commit()
 

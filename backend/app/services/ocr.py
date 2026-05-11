@@ -62,14 +62,15 @@ async def process_document_ocr(tenant_id: UUID, document_id: UUID):
         try:
             raw_text = await run_ocr_pipeline(document.storage_path, document.mime_type)
             
-            # Store OCR result in DocumentExtraction
+            # --- Transactional Boundary: Store OCR results and update status ---
             extraction_in = {
                 "document_id": document.id,
                 "extraction_engine": "tesseract",
                 "extraction_status": ExtractionStatus.PENDING,  # PENDING because parsing comes next
                 "raw_ocr_text": raw_text
             }
-            await uow.documents.add_extraction(uow.session, extraction_in)
+            # Use specialized repository for extraction records
+            await uow.document_extractions.create(uow.session, obj_in=extraction_in)
             
             # Update Document status — use repo.update() only; avoid redundant direct attribute set
             old_status = document.processing_status
@@ -84,24 +85,32 @@ async def process_document_ocr(tenant_id: UUID, document_id: UUID):
                 old_value=old_status,
                 new_value=DocumentProcessingStatus.OCR_COMPLETE
             )
+            # Explicit commit: ensures OCR data and status change are atomic
             await uow.commit()
             
             logger.info(f"OCR complete for document {document_id}")
             
         except Exception as e:
+            # --- Transactional Boundary: Rollback occurs automatically via __aexit__ on exception ---
             logger.error(f"Failed OCR for document {document_id}: {e}")
             old_status = document.processing_status
-            await uow.documents.update(uow.session, db_obj=document, obj_in={"processing_status": DocumentProcessingStatus.FAILED})
             
-            await AuditService.log_event(
-                session=uow.session,
-                entity_type="DOCUMENT",
-                entity_id=document.id,
-                action="OCR_FAILED",
-                field_name="processing_status",
-                old_value=old_status,
-                new_value=DocumentProcessingStatus.FAILED,
-                reason=str(e)
-            )
-            await uow.commit()
+            # Start a new transaction for error state logging
+            async with SQLAlchemyUnitOfWork() as error_uow:
+                # Reload document in new session
+                doc = await error_uow.documents.get(error_uow.session, document_id)
+                if doc:
+                    await error_uow.documents.update(error_uow.session, db_obj=doc, obj_in={"processing_status": DocumentProcessingStatus.FAILED})
+                    
+                    await AuditService.log_event(
+                        session=error_uow.session,
+                        entity_type="DOCUMENT",
+                        entity_id=doc.id,
+                        action="OCR_FAILED",
+                        field_name="processing_status",
+                        old_value=old_status,
+                        new_value=DocumentProcessingStatus.FAILED,
+                        reason=str(e)
+                    )
+                    await error_uow.commit()
 
