@@ -6,6 +6,7 @@ from app.repositories.user import UserRepository
 from app.repositories.vendor import VendorRepository
 from app.repositories.product import ProductRepository
 from app.repositories.purchase_order import PurchaseOrderRepository, POLineItemRepository
+from app.repositories.grn import GRNRepository, GRNLineItemRepository
 from app.repositories.invoice import InvoiceRepository, InvoiceLineItemRepository
 from app.repositories.payment import PaymentRepository
 from app.repositories.vendor_settlement import VendorSettlementRepository
@@ -35,6 +36,8 @@ class BaseUnitOfWork(ABC):
     products: ProductRepository
     purchase_orders: PurchaseOrderRepository
     po_line_items: POLineItemRepository
+    grns: GRNRepository
+    grn_line_items: GRNLineItemRepository
     invoices: InvoiceRepository
     invoice_line_items: InvoiceLineItemRepository
     payments: PaymentRepository
@@ -97,6 +100,8 @@ class SQLAlchemyUnitOfWork(BaseUnitOfWork):
         self.products = ProductRepository()
         self.purchase_orders = PurchaseOrderRepository()
         self.po_line_items = POLineItemRepository()
+        self.grns = GRNRepository()
+        self.grn_line_items = GRNLineItemRepository()
         self.invoices = InvoiceRepository()
         self.invoice_line_items = InvoiceLineItemRepository()
         self.payments = PaymentRepository()

@@ -8,6 +8,7 @@ from app.models.audit_log import AuditLog
 from app.models.vendor import Vendor
 from app.models.product import Product
 from app.models.purchase_order import PurchaseOrder, POLineItem
+from app.models.grn import GRN, GRNLineItem
 from app.models.invoice import Invoice, InvoiceLineItem
 from app.models.payment import Payment
 from app.models.alert import Alert
@@ -33,6 +34,8 @@ __all__ = [
     "Product",
     "PurchaseOrder",
     "POLineItem",
+    "GRN",
+    "GRNLineItem",
     "Invoice",
     "InvoiceLineItem",
     "Payment",

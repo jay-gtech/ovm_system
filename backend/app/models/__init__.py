@@ -6,6 +6,7 @@ from .audit_log import AuditLog, AuditAction
 from .vendor import Vendor, VendorStatus
 from .product import Product, ProductStatus
 from .purchase_order import PurchaseOrder, POLineItem, PurchaseOrderStatus
+from .grn import GRN, GRNLineItem, GRNStatus
 from .invoice import Invoice, InvoiceLineItem, InvoiceStatus
 from .payment import Payment, PaymentStatus
 from .vendor_settlement import VendorSettlement, SettlementStatus
@@ -29,6 +30,9 @@ __all__ = [
     "PurchaseOrder",
     "POLineItem",
     "PurchaseOrderStatus",
+    "GRN",
+    "GRNLineItem",
+    "GRNStatus",
     "Invoice",
     "InvoiceLineItem",
     "InvoiceStatus",
