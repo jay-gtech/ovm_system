@@ -245,6 +245,52 @@ class InvoiceService(BaseService):
                     f"{status_update.status.value} is not allowed"
                 )
 
+            # Three-Way Match Validation (Demo-safe)
+            if status_update.status == InvoiceStatus.ISSUED and invoice.purchase_order_id:
+                from app.models.grn import GRNStatus
+                from app.services.alert import AlertService
+
+                total_invoiced_qty = sum((item.quantity_snapshot for item in invoice.line_items), Decimal("0.0000"))
+                grns = await uow.grns.list_by_po_id(uow.session, organization_id, invoice.purchase_order_id)
+                total_received_qty = sum(
+                    (grn.total_received_qty for grn in grns if grn.status == GRNStatus.COMPLETED),
+                    Decimal("0.0000")
+                )
+
+                if total_received_qty < total_invoiced_qty:
+                    # 1. Create validation alert
+                    alert_service = AlertService(uow.session)
+                    await alert_service.create_alert(
+                        organization_id=organization_id,
+                        alert_type="THREE_WAY_MATCH_FAILURE",
+                        severity="HIGH",
+                        entity_type="invoice",
+                        entity_id=invoice.id,
+                        title="Three-Way Match Validation Failed",
+                        message=f"Cannot approve invoice: Total received quantity ({total_received_qty}) is less than invoiced quantity ({total_invoiced_qty}).",
+                        metadata={
+                            "po_id": str(invoice.purchase_order_id),
+                            "total_received_qty": str(total_received_qty),
+                            "total_invoiced_qty": str(total_invoiced_qty)
+                        }
+                    )
+                    
+                    # 2. Create audit log
+                    await AuditService.log_event(
+                        uow.session,
+                        entity_type="invoice",
+                        entity_id=invoice.id,
+                        action="THREE_WAY_MATCH_FAILED",
+                        field_name="status",
+                        old_value=invoice.status.value,
+                        new_value=status_update.status.value,
+                    )
+                    
+                    # 3. Block approval
+                    raise BusinessRuleViolationException(
+                        f"Three-way match failed: Invoiced quantity ({total_invoiced_qty}) exceeds received quantity ({total_received_qty})"
+                    )
+
             old_status = invoice.status
             invoice.status = status_update.status
 
