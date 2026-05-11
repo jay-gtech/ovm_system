@@ -32,6 +32,7 @@ class ValidationEngine:
         total_amt = Decimal(str(total_amt_raw)) if total_amt_raw is not None else None
 
         # --- Tenant-scoped duplicate invoice check ---
+        # Enforcement: apply_tenant_scope ensures we only check invoices for the active organization.
         existing_invoice = None
         if invoice_num:
             query = apply_tenant_scope(
@@ -44,6 +45,7 @@ class ValidationEngine:
                 mismatches.append(f"Duplicate invoice number detected: {invoice_num}")
 
         # --- Tenant-scoped PO lookup ---
+        # Enforcement: apply_tenant_scope prevents cross-tenant PO access even if po_number is known.
         po_record = None
         if po_num:
             query = apply_tenant_scope(
@@ -54,6 +56,21 @@ class ValidationEngine:
             po_record = result.scalars().first()
             if not po_record:
                 mismatches.append(f"Purchase Order not found: {po_num}")
+
+        # --- Tenant-scoped Vendor validation ---
+        # Enforcement: apply_tenant_scope ensures we only validate against vendors owned by the tenant.
+        vendor_name = extracted.get("vendor_name")
+        if vendor_name:
+            query = apply_tenant_scope(
+                select(Vendor).where(Vendor.legal_name == vendor_name),
+                Vendor
+            )
+            result = await db.execute(query)
+            vendor_record = result.scalars().first()
+            if not vendor_record:
+                mismatches.append(f"Vendor not recognized in master data: {vendor_name}")
+            elif po_record and po_record.vendor_id != vendor_record.id:
+                mismatches.append(f"Vendor mismatch: PO belongs to {po_record.vendor.display_name}, but Invoice is from {vendor_name}")
 
         # --- Explicit link priority: PO > Invoice (PO is the authoritative workflow entity) ---
         if po_record:
@@ -84,6 +101,7 @@ class ValidationEngine:
 
         if po_num:
             # --- Tenant-scoped PO lookup ---
+            # Enforcement: apply_tenant_scope ensures PO belongs to the active organization.
             query = apply_tenant_scope(
                 select(PurchaseOrder).where(PurchaseOrder.po_number == po_num),
                 PurchaseOrder
@@ -107,22 +125,30 @@ from app.services.uow import SQLAlchemyUnitOfWork
 from app.services.audit import AuditService
 
 async def create_validation_alert(uow: SQLAlchemyUnitOfWork, document: Document, message: str):
-    """Integrates with Mismatch Alert engine."""
+    """Integrates with Mismatch Alert engine with strict tenant isolation."""
     alert_in = {
-        "alert_type": AlertType.RISK,
+        "organization_id": document.organization_id,  # Enforcement: Explicit tenant assignment
+        "alert_type": AlertType.WORKFLOW_STALL,       # Corrected enum
         "severity": AlertSeverity.HIGH,
+        "entity_type": "DOCUMENT",
+        "entity_id": document.id,
+        "title": "Document Validation Mismatch",
         "message": f"Document Validation Mismatch [Doc {document.id}]: {message}",
         "metadata_json": {
             "document_id": str(document.id),
             "document_type": document.document_type
         }
     }
+    # Note: AlertRepository.create does not inherit from BaseRepository, 
+    # so we must pass organization_id explicitly in alert_in.
     await uow.alerts.create(uow.session, obj_in=alert_in)
 
 async def process_document_validation(tenant_id: UUID, document_id: UUID):
     async with SQLAlchemyUnitOfWork() as uow:
+        # Enforcement: Set tenant context for all subsequent repo/query calls.
         set_tenant_id(tenant_id)
         
+        # Enforcement: get_with_relations uses apply_tenant_scope to prevent cross-tenant access.
         document = await uow.documents.get_with_relations(uow.session, document_id)
         if not document or document.processing_status != DocumentProcessingStatus.EXTRACTION_COMPLETE:
             return
