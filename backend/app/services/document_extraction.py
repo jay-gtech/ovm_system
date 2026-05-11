@@ -2,6 +2,7 @@ import re
 import logging
 from uuid import UUID
 from typing import Dict, Any
+from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -23,36 +24,35 @@ class ExtractionEngine:
         inv_match = re.search(r'(?i)invoice\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)', text)
         if inv_match:
             data['invoice_number'] = inv_match.group(1)
-            confidence['invoice_number'] = 0.9
+            confidence['invoice_number'] = str(Decimal('0.9'))  # Decimal serialization to string
             
         # Invoice Date
         date_match = re.search(r'(?i)(?:invoice\s*)?date\s*[:\-]?\s*(\d{2,4}[-/]\d{1,2}[-/]\d{1,4})', text)
         if date_match:
             data['invoice_date'] = date_match.group(1)
-            confidence['invoice_date'] = 0.8
+            confidence['invoice_date'] = str(Decimal('0.8'))  # Decimal serialization to string
             
         # Due Date
         due_match = re.search(r'(?i)due\s*date\s*[:\-]?\s*(\d{2,4}[-/]\d{1,2}[-/]\d{1,4})', text)
         if due_match:
             data['due_date'] = due_match.group(1)
-            confidence['due_date'] = 0.8
+            confidence['due_date'] = str(Decimal('0.8'))  # Decimal serialization to string
 
         # PO Reference
         po_match = re.search(r'(?i)(?:po|purchase\s*order)\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)', text)
         if po_match:
             data['po_reference'] = po_match.group(1)
-            confidence['po_reference'] = 0.85
+            confidence['po_reference'] = str(Decimal('0.85'))  # Decimal serialization to string
 
         # Amounts — store as Decimal strings in JSONB to prevent float precision loss
         amounts = re.findall(r'\$\s*(\d+(?:,\d{3})*(?:\.\d{2}))', text)
         if amounts:
-            from decimal import Decimal
             amounts_d = sorted([Decimal(a.replace(',', '')) for a in amounts])
             data['total_amount'] = str(amounts_d[-1])      # string to preserve precision
-            confidence['total_amount'] = 0.7
+            confidence['total_amount'] = str(Decimal('0.7'))  # Decimal serialization to string
             if len(amounts_d) > 1:
                 data['subtotal_amount'] = str(amounts_d[-2])
-                confidence['subtotal_amount'] = 0.6
+                confidence['subtotal_amount'] = str(Decimal('0.6'))  # Decimal serialization to string
 
         return data, confidence
 
@@ -66,21 +66,20 @@ class ExtractionEngine:
         po_match = re.search(r'(?i)(?:po|purchase\s*order)\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)', text)
         if po_match:
             data['po_number'] = po_match.group(1)
-            confidence['po_number'] = 0.9
+            confidence['po_number'] = str(Decimal('0.9'))  # Decimal serialization to string
 
         # Issue Date
         date_match = re.search(r'(?i)(?:issue\s*)?date\s*[:\-]?\s*(\d{2,4}[-/]\d{1,2}[-/]\d{1,4})', text)
         if date_match:
             data['issue_date'] = date_match.group(1)
-            confidence['issue_date'] = 0.8
+            confidence['issue_date'] = str(Decimal('0.8'))  # Decimal serialization to string
 
         # Amounts — store as Decimal strings in JSONB to prevent float precision loss
         amounts = re.findall(r'\$\s*(\d+(?:,\d{3})*(?:\.\d{2}))', text)
         if amounts:
-            from decimal import Decimal
             amounts_d = sorted([Decimal(a.replace(',', '')) for a in amounts])
             data['expected_amount'] = str(amounts_d[-1])   # string to preserve precision
-            confidence['expected_amount'] = 0.7
+            confidence['expected_amount'] = str(Decimal('0.7'))  # Decimal serialization to string
 
         return data, confidence
 

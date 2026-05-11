@@ -31,6 +31,19 @@ class ValidationEngine:
         total_amt_raw = extracted.get("total_amount")
         total_amt = Decimal(str(total_amt_raw)) if total_amt_raw is not None else None
 
+        # Extract subtotal and tax amounts for mathematical validation
+        subtotal_amt_raw = extracted.get("subtotal_amount")
+        subtotal_amt = Decimal(str(subtotal_amt_raw)) if subtotal_amt_raw is not None else None
+
+        tax_amt_raw = extracted.get("tax_amount")
+        tax_amt = Decimal(str(tax_amt_raw)) if tax_amt_raw is not None else None
+
+        # Precision-sensitive calculation: validate invoice totals, GST/tax amounts, subtotal calculations
+        if total_amt is not None and subtotal_amt is not None:
+            calc_tax = tax_amt if tax_amt is not None else Decimal('0.00')
+            if abs((subtotal_amt + calc_tax) - total_amt) > TOLERANCE_AMOUNT:
+                mismatches.append(f"Calculation mismatch: Subtotal ({subtotal_amt}) + Tax ({calc_tax}) does not equal Total ({total_amt})")
+
         # --- Tenant-scoped duplicate invoice check ---
         # Enforcement: apply_tenant_scope ensures we only check invoices for the active organization.
         existing_invoice = None
