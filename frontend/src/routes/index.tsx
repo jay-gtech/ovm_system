@@ -17,6 +17,7 @@ const Alerts             = lazy(() => import('../modules/alerts/AlertsPage'))
 const Notifications      = lazy(() => import('../modules/notifications/NotificationsPage'))
 const RiskIntelligence   = lazy(() => import('../modules/risk/RiskIntelligencePage'))
 const Monitoring         = lazy(() => import('../modules/monitoring/MonitoringPage'))
+const Operations         = lazy(() => import('../modules/ops/OperationsMonitoringPage').then(m => ({ default: m.OperationsMonitoringPage })))
 const Reports    = lazy(() => import('../modules/reports/ReportsPage'))
 const Settings   = lazy(() => import('../modules/settings/SettingsPage'))
 
